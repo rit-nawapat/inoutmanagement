@@ -310,23 +310,42 @@ function renderAccounts() {
 }
 
 const display = document.getElementById('display');
+
 function pressClearAll() {
-    // 1. รีเซ็ตตัวเลข
     expression = '0';
     isEvaluated = false;
     display.innerText = expression;
 
-    // 2. เคลียร์ข้อมูลที่สแกนมาทั้งหมด และซ่อนข้อความ
+    // เคลียร์ข้อมูลสแกนเมื่อกด C
     currentScannedBarcode = "";
     currentSlipRefNo = "";
-    document.getElementById('scanned-note').classList.add('hidden');
-    document.getElementById('scanned-note').innerHTML = "";
+    const noteEl = document.getElementById('scanned-note');
+    if (noteEl) {
+        noteEl.classList.add('hidden');
+        noteEl.innerHTML = "";
+    }
 }
 
 function pressQuickPrice(value) { calculate(); let c = parseFloat(expression); if (isNaN(c) || isEvaluated) { c = 0; isEvaluated = false; } expression = (c + value).toString(); display.innerText = expression; }
 function pressKey(key) { if (expression === '0' || isEvaluated) { expression = key === '.' ? '0.' : key; isEvaluated = false; } else { const s = expression.split(/[\+\-\*\/]/); if (key === '.' && s[s.length - 1].includes('.')) return; expression += key; } display.innerText = expression; }
 function pressOp(op) { const l = expression.trim().slice(-1); if (['+', '-', '*', '/'].includes(l)) { expression = expression.slice(0, -1) + op; } else { expression += op; } isEvaluated = false; display.innerText = expression; }
-function pressClear() { expression = expression.length > 1 ? expression.slice(0, -1) : '0'; display.innerText = expression; }
+
+function pressClear() {
+    expression = expression.length > 1 ? expression.slice(0, -1) : '0';
+    display.innerText = expression;
+
+    // ถ้ากดปุ่ม ⌫ ลบจนเหลือ 0 ให้เคลียร์ข้อมูลสแกนทิ้งด้วย
+    if (expression === '0') {
+        currentScannedBarcode = "";
+        currentSlipRefNo = "";
+        const noteEl = document.getElementById('scanned-note');
+        if (noteEl) {
+            noteEl.classList.add('hidden');
+            noteEl.innerHTML = "";
+        }
+    }
+}
+
 function calculate() { try { if (!expression) return; expression = Number(new Function(`return ${expression}`)().toFixed(2)).toString(); display.innerText = expression; isEvaluated = true; } catch (e) { display.innerText = '0'; expression = '0'; } }
 
 function playScanSuccessSound() {
