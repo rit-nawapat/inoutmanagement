@@ -76,13 +76,3 @@
     font-weight: bold !important;
     cursor: pointer;
 }
-
-@keyframes scanner-laser {
-    0% { top: 0%; }
-    50% { top: 100%; }
-    100% { top: 0%; }
-}
-
-.animate-scanner-laser {
-    animation: scanner-laser 2.5s infinite linear;
-}

@@ -4,8 +4,7 @@ let currentPage = 'add';
 let currentType = 'spent';
 let expression = '0';
 let isEvaluated = false;
-let html5QrCode = null;
-let currentFacingMode = "environment";
+let html5QrcodeScanner = null;
 let currentSlipRefNo = "";
 let currentScannedBarcode = "";
 let editModeId = null;
@@ -369,116 +368,73 @@ function playScanSuccessSound() {
     }
 }
 
-function startCameraOverlay() {
-    const overlay = document.getElementById('camera-overlay');
-    overlay.classList.remove('hidden');
-    
-    if (html5QrCode) {
-        html5QrCode.stop().catch(() => {}).finally(() => {
-            html5QrCode = null;
-            initCamera();
-        });
-    } else {
-        initCamera();
-    }
-}
-
-function initCamera() {
-    html5QrCode = new Html5Qrcode("camera-preview");
-    const config = {
-        fps: 15,
-        qrbox: (width, height) => {
-            const minSize = Math.min(width, height);
-            const boxSize = Math.min(minSize * 0.7, 280);
-            return { width: boxSize, height: boxSize };
-        },
-        videoConstraints: {
-            facingMode: currentFacingMode,
-            focusMode: "continuous",
-            advanced: [
-                { focusMode: "continuous" },
-                { autofocus: true }
-            ]
-        }
-    };
-    
-    html5QrCode.start(
-        { facingMode: currentFacingMode },
-        config,
-        (decodedText) => {
+function toggleQRScanner() {
+    const wrapper = document.getElementById('qr-reader-wrapper');
+    if (wrapper.classList.contains('hidden')) {
+        wrapper.classList.remove('hidden'); document.getElementById('scan-text').innerText = "ปิดกล้อง";
+        
+        // Pass video constraints for continuous focus inside Html5QrcodeScanner config!
+        html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { 
+            fps: 15, 
+            qrbox: { width: 250, height: 150 },
+            videoConstraints: {
+                focusMode: "continuous",
+                advanced: [{ focusMode: "continuous" }, { autofocus: true }]
+            }
+        }, false);
+        
+        html5QrcodeScanner.render((decodedText) => {
             playScanSuccessSound();
-            handleScannedResult(decodedText);
-            stopCameraOverlay();
-        },
-        (errorMessage) => {
-            // Ignore ongoing frame scanning errors
-        }
-    ).catch(err => {
-        showToast("ไม่สามารถเปิดกล้องได้: " + err, "error");
-        stopCameraOverlay();
-    });
-}
-
-function stopCameraOverlay() {
-    const overlay = document.getElementById('camera-overlay');
-    overlay.classList.add('hidden');
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-            html5QrCode = null;
-        }).catch(err => {
-            html5QrCode = null;
-        });
-    }
-}
-
-function toggleCameraFacing() {
-    currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
-    showToast("สลับกล้องเป็น: " + (currentFacingMode === "environment" ? "กล้องหลัง" : "กล้องหน้า"), "success");
-    if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-            initCamera();
-        }).catch(() => {
-            initCamera();
-        });
-    }
-}
-
-function handleScannedResult(decodedText) {
-    if (decodedText.startsWith("000201")) {
-        const amountMatch = decodedText.match(/54\d{2}(\d+\.\d{2})/);
-        if (amountMatch && amountMatch[1]) {
-            let slipAmount = parseFloat(amountMatch[1]); 
-            expression = slipAmount.toString(); 
-            display.innerText = expression;
-            currentScannedBarcode = "สลิปพร้อมเพย์ (QR)"; 
-            document.getElementById('scanned-note').innerHTML = `<i data-lucide="qr-code" class="w-3 h-3 inline-block"></i> ฿${slipAmount}`; 
-            document.getElementById('scanned-note').classList.remove('hidden'); 
-            lucide.createIcons(); 
+            if (decodedText.startsWith("000201")) {
+                const amountMatch = decodedText.match(/54\d{2}(\d+\.\d{2})/);
+                if (amountMatch && amountMatch[1]) {
+                    let slipAmount = parseFloat(amountMatch[1]); expression = slipAmount.toString(); display.innerText = expression;
+                    currentScannedBarcode = "สลิปพร้อมเพย์ (QR)"; 
+                    document.getElementById('scanned-note').innerHTML = `<i data-lucide="qr-code" class="w-3 h-3 inline-block"></i> ฿${slipAmount}`; 
+                    document.getElementById('scanned-note').classList.remove('hidden'); 
+                    lucide.createIcons(); 
+                    
+                    selectedAccount = 'qrscan';
+                    renderAccounts();
+                    
+                    showToast(`พบยอด ฿${slipAmount} และเลือกช่องสแกนจ่ายออโต้`, 'success'); 
+                    toggleQRScanner(); 
+                    return;
+                }
+            }
             
-            selectedAccount = 'qrscan';
-            renderAccounts();
-            
-            showToast(`พบยอด ฿${slipAmount} และเลือกช่องสแกนจ่ายออโต้`, 'success'); 
-            return;
-        }
-    }
-    
-    showToast("กำลังค้นหาข้อมูลสินค้า...", "success");
-    fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`).then(res => res.json()).then(data => {
-        let pName = (data.status === 1 && data.product) ? (data.product.product_name_th || data.product.product_name) : null;
-        currentScannedBarcode = pName || `รหัส: ${decodedText}`; 
-        document.getElementById('scanned-note').innerHTML = `<i data-lucide="package" class="w-3 h-3 inline-block"></i> ${currentScannedBarcode}`; 
-        document.getElementById('scanned-note').classList.remove('hidden'); 
-        lucide.createIcons();
-        showToast(`พบสินค้า: ${pName || decodedText}`, 'success');
-    }).catch(() => {
-        currentScannedBarcode = `รหัส: ${decodedText}`; 
-        document.getElementById('scanned-note').innerHTML = `<i data-lucide="search" class="w-3 h-3 inline-block"></i> ${decodedText}`; 
-        document.getElementById('scanned-note').classList.remove('hidden'); 
-        lucide.createIcons();
-        showToast(`พบรหัสสินค้า: ${decodedText}`, 'success');
-    });
+            showToast("กำลังค้นหาข้อมูลสินค้า...", "success");
+            fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`).then(res => res.json()).then(data => {
+                let pName = (data.status === 1 && data.product) ? (data.product.product_name_th || data.product.product_name) : null;
+                currentScannedBarcode = pName || `รหัส: ${decodedText}`; 
+                document.getElementById('scanned-note').innerHTML = `<i data-lucide="package" class="w-3 h-3 inline-block"></i> ${currentScannedBarcode}`; 
+                document.getElementById('scanned-note').classList.remove('hidden'); 
+                lucide.createIcons();
+                showToast(`พบสินค้า: ${pName || decodedText}`, 'success');
+            }).catch(() => {
+                currentScannedBarcode = `รหัส: ${decodedText}`; 
+                document.getElementById('scanned-note').innerHTML = `<i data-lucide="search" class="w-3 h-3 inline-block"></i> ${decodedText}`; 
+                document.getElementById('scanned-note').classList.remove('hidden'); 
+                lucide.createIcons();
+                showToast(`พบรหัสสินค้า: ${decodedText}`, 'success');
+            }); 
+            toggleQRScanner();
+        }, (error) => { });
+    } else { stopQRScanner(); }
 }
+
+function stopQRScanner() { 
+    const wrapper = document.getElementById('qr-reader-wrapper'); 
+    if (!wrapper.classList.contains('hidden')) { 
+        wrapper.classList.add('hidden'); 
+        document.getElementById('scan-text').innerText = "กล้อง"; 
+        if (html5QrcodeScanner) { 
+            html5QrcodeScanner.clear(); 
+            html5QrcodeScanner = null; 
+        } 
+    } 
+}
+
 
 // ----------------------------------------------------------------------
 // ⭐️ ระบบ "รายการประจำ" ตรวจสอบสถานะเดือนต่อเดือน ⭐️
@@ -806,9 +762,7 @@ window.switchPage = switchPage;
 window.triggerResetConfirm = triggerResetConfirm;
 window.setType = setType;
 window.processSlipOCR = processSlipOCR;
-window.startCameraOverlay = startCameraOverlay;
-window.stopCameraOverlay = stopCameraOverlay;
-window.toggleCameraFacing = toggleCameraFacing;
+window.toggleQRScanner = toggleQRScanner;
 window.openRecurringModal = openRecurringModal;
 window.closeRecurringModal = closeRecurringModal;
 window.saveRecurringItem = saveRecurringItem;
