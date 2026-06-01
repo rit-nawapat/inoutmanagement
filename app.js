@@ -310,7 +310,19 @@ function renderAccounts() {
 }
 
 const display = document.getElementById('display');
-function pressClearAll() { expression = '0'; isEvaluated = false; display.innerText = expression; }
+function pressClearAll() {
+    // 1. รีเซ็ตตัวเลข
+    expression = '0';
+    isEvaluated = false;
+    display.innerText = expression;
+
+    // 2. เคลียร์ข้อมูลที่สแกนมาทั้งหมด และซ่อนข้อความ
+    currentScannedBarcode = "";
+    currentSlipRefNo = "";
+    document.getElementById('scanned-note').classList.add('hidden');
+    document.getElementById('scanned-note').innerHTML = "";
+}
+
 function pressQuickPrice(value) { calculate(); let c = parseFloat(expression); if (isNaN(c) || isEvaluated) { c = 0; isEvaluated = false; } expression = (c + value).toString(); display.innerText = expression; }
 function pressKey(key) { if (expression === '0' || isEvaluated) { expression = key === '.' ? '0.' : key; isEvaluated = false; } else { const s = expression.split(/[\+\-\*\/]/); if (key === '.' && s[s.length - 1].includes('.')) return; expression += key; } display.innerText = expression; }
 function pressOp(op) { const l = expression.trim().slice(-1); if (['+', '-', '*', '/'].includes(l)) { expression = expression.slice(0, -1) + op; } else { expression += op; } isEvaluated = false; display.innerText = expression; }
