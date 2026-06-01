@@ -4,9 +4,18 @@ let currentPage = 'add';
 let currentType = 'spent';
 let expression = '0';
 let isEvaluated = false;
-let html5QrcodeScanner = null;
+let html5QrCode = null;
+let currentFacingMode = "environment";
+let currentSlipRefNo = "";
 let currentScannedBarcode = "";
 let editModeId = null;
+
+const thaiMonths = {
+    'ม.ค.': 0, 'ก.พ.': 1, 'มี.ค.': 2, 'เม.ย.': 3, 'พ.ค.': 4, 'มิ.ย.': 5,
+    'ก.ค.': 6, 'ส.ค.': 7, 'ก.ย.': 8, 'ต.ค.': 9, 'พ.ย.': 10, 'ธ.ค.': 11,
+    'มกราคม': 0, 'กุมภาพันธ์': 1, 'มีนาคม': 2, 'เมษายน': 3, 'พฤษภาคม': 4, 'มิถุนายน': 5,
+    'กรกฎาคม': 6, 'สิงหาคม': 7, 'กันยายน': 8, 'ตุลาคม': 9, 'พฤศจิกายน': 10, 'ธันวาคม': 11
+};
 
 const categories = {
     spent: [
@@ -43,31 +52,179 @@ function formatCurrencyInput(input) {
     input.value = parts.join('.');
 }
 
+function parseDateTimeFromOCR(ocrText) {
+    const cleanText = ocrText.replace(/\s+/g, ' ');
+    
+    // Match Thai format: 02 มิ.ย. 2569 - 05:28 or 02 มิ.ย. 69 05:28 or 02 มิถุนายน 2569 05:28
+    const thaiDateRegex = /(\d{1,2})\s*([ก-ฮ\.]+)\s*(\d{2,4})\s*(?:-|เวลา)?\s*(\d{2}:\d{2})/;
+    const thaiDateMatch = cleanText.match(thaiDateRegex);
+    if (thaiDateMatch) {
+        const day = parseInt(thaiDateMatch[1]);
+        const monthStr = thaiDateMatch[2];
+        let year = parseInt(thaiDateMatch[3]);
+        const time = thaiDateMatch[4];
+        
+        if (year < 100) year += 2000;
+        if (year > 2500) year -= 543; // Convert B.E. to A.D.
+        
+        const monthIndex = thaiMonths[monthStr] !== undefined ? thaiMonths[monthStr] : 0;
+        const [hours, minutes] = time.split(':');
+        const d = new Date(year, monthIndex, day, parseInt(hours), parseInt(minutes));
+        if (!isNaN(d.getTime())) {
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            return d.toISOString().slice(0, 16);
+        }
+    }
+
+    // Match English / standard format: DD/MM/YYYY HH:MM or DD-MM-YYYY HH:MM or YYYY-MM-DD HH:MM
+    const engDateRegex = /(\d{2})[\/\.-](\d{2})[\/\.-](\d{4}|\d{2})\s+(\d{2}:\d{2})/;
+    const engDateMatch = cleanText.match(engDateRegex);
+    if (engDateMatch) {
+        const day = parseInt(engDateMatch[1]);
+        const month = parseInt(engDateMatch[2]) - 1;
+        let year = parseInt(engDateMatch[3]);
+        const time = engDateMatch[4];
+        if (year < 100) year += 2000;
+        const [hours, minutes] = time.split(':');
+        const d = new Date(year, month, day, parseInt(hours), parseInt(minutes));
+        if (!isNaN(d.getTime())) {
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            return d.toISOString().slice(0, 16);
+        }
+    }
+    return null;
+}
+
+function parseRefNoFromOCR(ocrText) {
+    const cleanText = ocrText.replace(/\s+/g, ' ');
+    const refRegex = /(?:เลขที่อ้างอิง|รหัสอ้างอิง|เลขที่รายการ|ref(?:\.?\s*no)?|trans(?:\.?\s*id)?|transaction\s*id)[\s\S]{0,15}?([A-Za-z0-9\-]{8,25})/i;
+    const refMatch = cleanText.match(refRegex);
+    if (refMatch) {
+        return refMatch[1].trim();
+    }
+    return null;
+}
+
+function checkDuplicateSlip(refNo) {
+    if (!refNo) return false;
+    const history = JSON.parse(localStorage.getItem('my_tx_history') || '[]');
+    return history.find(tx => tx.slipRefNo === refNo);
+}
+
+function guessCategoryFromText(ocrText) {
+    const text = ocrText.toLowerCase();
+    const mappings = [
+        {
+            categoryId: 'bills',
+            keywords: ['ไฟ', 'น้ำ', 'เน็ต', 'อินเทอร์เน็ต', 'โทรศัพท์', 'มือถือ', 'ส่วนกลาง', 'บ้าน', 'คอนโด', 'บัตร', 'ประกัน', 'งวด', 'เช่า', 'bill', 'electric', 'water', 'internet', 'wifi', 'phone', 'condo', 'card', 'insurance']
+        },
+        {
+            categoryId: 'transport',
+            keywords: ['รถ', 'น้ำมัน', 'ทางด่วน', 'บีทีเอส', 'bts', 'mrt', 'แท็กซี่', 'taxi', 'car', 'gas', 'fuel', 'toll', 'ปตท', 'ptt', 'shell', 'bangchak', 'บางจาก', 'เชลล์']
+        },
+        {
+            categoryId: 'food',
+            keywords: ['อาหาร', 'ข้าว', 'กิน', 'ชาบู', 'หมูกระทะ', 'บุฟเฟต์', 'food', 'shabu', 'buffet', 'lunch', 'dinner', 'kfc', 'mcdonald', 'ร้านอาหาร', 'ก๋วยเตี๋ยว', 'คาเฟ่', 'coffee', 'starbucks', 'ส้มตำ', 'ชาไข่มุก']
+        },
+        {
+            categoryId: 'beverage',
+            keywords: ['กาแฟ', 'ชา', 'นม', 'น้ำดื่ม', 'เบียร์', 'เหล้า', 'coffee', 'tea', 'drink', 'beverage', 'beer']
+        },
+        {
+            categoryId: 'grocery',
+            keywords: ['ของใช้', 'สบู่', 'ยาสีฟัน', 'แชมพู', 'ซื้อของ', 'ห้าง', 'โลตัส', 'เซเว่น', 'grocery', 'shopping', 'supermarket', '7-eleven', '7-11', 'lotus', 'bigc', 'big c', 'makro', 'tops', 'cj']
+        },
+        {
+            categoryId: 'entertainment',
+            keywords: ['บันเทิง', 'หนัง', 'เน็ตฟลิกส์', 'netflix', 'youtube', 'disney', 'spotify', 'เกม', 'game', 'movie', 'sf', 'major']
+        },
+        {
+            categoryId: 'travel',
+            keywords: ['เที่ยว', 'ตั๋ว', 'บิน', 'เครื่องบิน', 'โรงแรม', 'travel', 'hotel', 'flight', 'trip']
+        }
+    ];
+
+    for (const mapping of mappings) {
+        const matched = mapping.keywords.some(keyword => text.includes(keyword));
+        if (matched) return mapping.categoryId;
+    }
+    return null;
+}
+
 function processSlipOCR(fileInput) {
     const file = fileInput.files[0];
     if (!file) return;
-    showToast('กำลังแกะยอดเงินจากรูปภาพ...', 'success');
+    showToast('กำลังแกะข้อมูลจากสลิป...', 'success');
+    
     Tesseract.recognize(file, 'tha+eng').then(({ data: { text } }) => {
+        let detectedAmount = 0;
+        
+        // 1. Extract Amount
         const moneyRegex = /(?:จำนวนเงิน|ยอดโอน|บาท|amt|amount)[\s\S]{0,15}?([0-9,]+\.[0-9]{2})/i;
         let match = text.replace(/ /g, '').match(moneyRegex);
-        if (!match) {
+        if (match && match[1]) {
+            detectedAmount = parseFloat(match[1].replace(/,/g, ''));
+        } else {
             const genericAmountRegex = /\b([0-9,]+\.[0-9]{2})\b/g;
             let allAmounts = []; let m;
             while ((m = genericAmountRegex.exec(text.replace(/ /g, ''))) !== null) {
-                let val = parseFloat(m[1].replace(/,/g, '')); if (!isNaN(val) && val > 0) allAmounts.push(val);
+                let val = parseFloat(m[1].replace(/,/g, '')); 
+                if (!isNaN(val) && val > 0) allAmounts.push(val);
             }
             if (allAmounts.length > 0) {
-                let detectedAmount = Math.max(...allAmounts);
-                expression = detectedAmount.toString(); display.innerText = expression;
-                currentScannedBarcode = "สลิปโอนเงิน (OCR)"; document.getElementById('scanned-note').innerHTML = `<i data-lucide="file-text" class="w-3 h-3 inline-block"></i> ฿${detectedAmount}`; document.getElementById('scanned-note').classList.remove('hidden'); lucide.createIcons();
-                showToast(`พบยอด ฿${detectedAmount}`, 'success'); return;
+                detectedAmount = Math.max(...allAmounts);
             }
         }
-        if (match && match[1]) {
-            let finalAmount = match[1].replace(/,/g, ''); expression = finalAmount; display.innerText = expression;
-            currentScannedBarcode = "สลิปโอนเงิน (OCR)"; document.getElementById('scanned-note').innerHTML = `<i data-lucide="file-text" class="w-3 h-3 inline-block"></i> ฿${finalAmount}`; document.getElementById('scanned-note').classList.remove('hidden'); lucide.createIcons(); showToast(`พบยอด ฿${finalAmount}`, 'success');
-        } else { showToast('ไม่พบยอดเงิน กรุณาพิมพ์เอง', 'error'); }
-    }).catch(err => { showToast('สแกนไม่สำเร็จ', 'error'); }).finally(() => { fileInput.value = ""; });
+
+        if (detectedAmount > 0) {
+            playScanSuccessSound();
+            expression = detectedAmount.toString(); 
+            display.innerText = expression;
+            
+            // 2. Parse Date and Time
+            const parsedDate = parseDateTimeFromOCR(text);
+            if (parsedDate) {
+                document.getElementById('tx-date').value = parsedDate;
+                showToast('ปรับปรุงวันที่และเวลาตามสลิป', 'success');
+            }
+            
+            // 3. Parse Reference Number & Check Duplicate
+            const refNo = parseRefNoFromOCR(text);
+            currentSlipRefNo = refNo || "";
+            if (refNo) {
+                const duplicateTx = checkDuplicateSlip(refNo);
+                if (duplicateTx) {
+                    showToast(`⚠️ สลิปซ้ำ! เคยบันทึกแล้วเมื่อ ${duplicateTx.date} ยอด ฿${duplicateTx.amount}`, 'error');
+                } else {
+                    showToast(`เลขอ้างอิงสลิป: ${refNo}`, 'success');
+                }
+            }
+
+            // 4. Smart Category Guessing
+            const guessedCatId = guessCategoryFromText(text);
+            if (guessedCatId) {
+                selectedCategory = guessedCatId;
+                renderCategories();
+            }
+
+            // 5. AUTO-SELECT BANK PAYMENT CHANNEL
+            selectedAccount = 'qrscan';
+            renderAccounts();
+            
+            currentScannedBarcode = refNo ? `สลิปโอนเงิน (Ref: ${refNo})` : "สลิปโอนเงิน (OCR)"; 
+            document.getElementById('scanned-note').innerHTML = `<i data-lucide="file-text" class="w-3 h-3 inline-block"></i> ฿${detectedAmount} ${refNo ? `[${refNo.slice(-6)}]` : ''}`; 
+            document.getElementById('scanned-note').classList.remove('hidden'); 
+            lucide.createIcons();
+            
+            showToast(`สแกนสลิปสำเร็จ ยอด ฿${detectedAmount}`, 'success');
+        } else { 
+            showToast('ไม่พบยอดเงิน กรุณาพิมพ์ระบุเอง', 'error'); 
+        }
+    }).catch(err => { 
+        showToast('สแกนไม่สำเร็จ หรือรูปภาพไม่ชัดเจน', 'error'); 
+    }).finally(() => { 
+        fileInput.value = ""; 
+    });
 }
 
 let touchStartX = 0, touchEndX = 0;
@@ -191,29 +348,137 @@ function pressOp(op) { const l = expression.trim().slice(-1); if (['+', '-', '*'
 function pressClear() { expression = expression.length > 1 ? expression.slice(0, -1) : '0'; display.innerText = expression; }
 function calculate() { try { if (!expression) return; expression = Number(new Function(`return ${expression}`)().toFixed(2)).toString(); display.innerText = expression; isEvaluated = true; } catch (e) { display.innerText = '0'; expression = '0'; } }
 
-function toggleQRScanner() {
-    const wrapper = document.getElementById('qr-reader-wrapper');
-    if (wrapper.classList.contains('hidden')) {
-        wrapper.classList.remove('hidden'); document.getElementById('scan-text').innerText = "ปิดกล้อง";
-        html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: { width: 250, height: 150 } }, false);
-        html5QrcodeScanner.render((decodedText) => {
-            if (decodedText.startsWith("000201")) {
-                const amountMatch = decodedText.match(/54\d{2}(\d+\.\d{2})/);
-                if (amountMatch && amountMatch[1]) {
-                    let slipAmount = parseFloat(amountMatch[1]); expression = slipAmount.toString(); display.innerText = expression;
-                    currentScannedBarcode = "สลิปพร้อมเพย์ (QR)"; document.getElementById('scanned-note').innerHTML = `<i data-lucide="qr-code" class="w-3 h-3 inline-block"></i> ฿${slipAmount}`; document.getElementById('scanned-note').classList.remove('hidden'); lucide.createIcons(); showToast(`พบยอด ฿${slipAmount}`, 'success'); toggleQRScanner(); return;
-                }
-            }
-            fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`).then(res => res.json()).then(data => {
-                let pName = (data.status === 1 && data.product) ? (data.product.product_name_th || data.product.product_name) : null;
-                currentScannedBarcode = pName || `รหัส: ${decodedText}`; document.getElementById('scanned-note').innerHTML = `<i data-lucide="package" class="w-3 h-3 inline-block"></i> ${currentScannedBarcode}`; document.getElementById('scanned-note').classList.remove('hidden'); lucide.createIcons();
-            }).catch(() => {
-                currentScannedBarcode = `รหัส: ${decodedText}`; document.getElementById('scanned-note').innerHTML = `<i data-lucide="search" class="w-3 h-3 inline-block"></i> ${decodedText}`; document.getElementById('scanned-note').classList.remove('hidden'); lucide.createIcons();
-            }); toggleQRScanner();
-        }, (error) => { });
-    } else { stopQRScanner(); }
+function playScanSuccessSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
+
+        oscillator.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+        oscillator.stop(audioCtx.currentTime + 0.12);
+    } catch (e) {
+        console.error("Failed to play scan sound:", e);
+    }
 }
-function stopQRScanner() { const wrapper = document.getElementById('qr-reader-wrapper'); if (!wrapper.classList.contains('hidden')) { wrapper.classList.add('hidden'); document.getElementById('scan-text').innerText = "กล้อง"; if (html5QrcodeScanner) { html5QrcodeScanner.clear(); html5QrcodeScanner = null; } } }
+
+function startCameraOverlay() {
+    const overlay = document.getElementById('camera-overlay');
+    overlay.classList.remove('hidden');
+    
+    if (html5QrCode) {
+        html5QrCode.stop().catch(() => {}).finally(() => {
+            html5QrCode = null;
+            initCamera();
+        });
+    } else {
+        initCamera();
+    }
+}
+
+function initCamera() {
+    html5QrCode = new Html5Qrcode("camera-preview");
+    const config = {
+        fps: 15,
+        qrbox: (width, height) => {
+            const minSize = Math.min(width, height);
+            const boxSize = Math.min(minSize * 0.7, 280);
+            return { width: boxSize, height: boxSize };
+        },
+        videoConstraints: {
+            facingMode: currentFacingMode,
+            focusMode: "continuous",
+            advanced: [
+                { focusMode: "continuous" },
+                { autofocus: true }
+            ]
+        }
+    };
+    
+    html5QrCode.start(
+        { facingMode: currentFacingMode },
+        config,
+        (decodedText) => {
+            playScanSuccessSound();
+            handleScannedResult(decodedText);
+            stopCameraOverlay();
+        },
+        (errorMessage) => {
+            // Ignore ongoing frame scanning errors
+        }
+    ).catch(err => {
+        showToast("ไม่สามารถเปิดกล้องได้: " + err, "error");
+        stopCameraOverlay();
+    });
+}
+
+function stopCameraOverlay() {
+    const overlay = document.getElementById('camera-overlay');
+    overlay.classList.add('hidden');
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            html5QrCode = null;
+        }).catch(err => {
+            html5QrCode = null;
+        });
+    }
+}
+
+function toggleCameraFacing() {
+    currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+    showToast("สลับกล้องเป็น: " + (currentFacingMode === "environment" ? "กล้องหลัง" : "กล้องหน้า"), "success");
+    if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+            initCamera();
+        }).catch(() => {
+            initCamera();
+        });
+    }
+}
+
+function handleScannedResult(decodedText) {
+    if (decodedText.startsWith("000201")) {
+        const amountMatch = decodedText.match(/54\d{2}(\d+\.\d{2})/);
+        if (amountMatch && amountMatch[1]) {
+            let slipAmount = parseFloat(amountMatch[1]); 
+            expression = slipAmount.toString(); 
+            display.innerText = expression;
+            currentScannedBarcode = "สลิปพร้อมเพย์ (QR)"; 
+            document.getElementById('scanned-note').innerHTML = `<i data-lucide="qr-code" class="w-3 h-3 inline-block"></i> ฿${slipAmount}`; 
+            document.getElementById('scanned-note').classList.remove('hidden'); 
+            lucide.createIcons(); 
+            
+            selectedAccount = 'qrscan';
+            renderAccounts();
+            
+            showToast(`พบยอด ฿${slipAmount} และเลือกช่องสแกนจ่ายออโต้`, 'success'); 
+            return;
+        }
+    }
+    
+    showToast("กำลังค้นหาข้อมูลสินค้า...", "success");
+    fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`).then(res => res.json()).then(data => {
+        let pName = (data.status === 1 && data.product) ? (data.product.product_name_th || data.product.product_name) : null;
+        currentScannedBarcode = pName || `รหัส: ${decodedText}`; 
+        document.getElementById('scanned-note').innerHTML = `<i data-lucide="package" class="w-3 h-3 inline-block"></i> ${currentScannedBarcode}`; 
+        document.getElementById('scanned-note').classList.remove('hidden'); 
+        lucide.createIcons();
+        showToast(`พบสินค้า: ${pName || decodedText}`, 'success');
+    }).catch(() => {
+        currentScannedBarcode = `รหัส: ${decodedText}`; 
+        document.getElementById('scanned-note').innerHTML = `<i data-lucide="search" class="w-3 h-3 inline-block"></i> ${decodedText}`; 
+        document.getElementById('scanned-note').classList.remove('hidden'); 
+        lucide.createIcons();
+        showToast(`พบรหัสสินค้า: ${decodedText}`, 'success');
+    });
+}
 
 // ----------------------------------------------------------------------
 // ⭐️ ระบบ "รายการประจำ" ตรวจสอบสถานะเดือนต่อเดือน ⭐️
@@ -457,7 +722,7 @@ function saveTransaction() {
 
     const transactionRecord = {
         id: editModeId || Date.now(), type: currentType, categoryName: matchedCat ? matchedCat.name : 'อื่นๆ', accountName: matchedAcc ? matchedAcc.name : 'เงินสด',
-        amount: finalVal, barcodeNote: currentScannedBarcode, date: inputDate.toLocaleString('th-TH'), isoDate: document.getElementById('tx-date').value,
+        amount: finalVal, barcodeNote: currentScannedBarcode, slipRefNo: currentSlipRefNo, date: inputDate.toLocaleString('th-TH'), isoDate: document.getElementById('tx-date').value,
         action: editModeId ? 'edit' : 'add', sheetName: 'Sheet1'
     };
 
@@ -466,7 +731,7 @@ function saveTransaction() {
     else { currentHistory.unshift({ ...transactionRecord, categoryIcon: matchedCat.icon, accountIcon: matchedAcc.icon }); }
 
     localStorage.setItem('my_tx_history', JSON.stringify(currentHistory));
-    expression = '0'; currentScannedBarcode = ""; display.innerText = expression; document.getElementById('scanned-note').classList.add('hidden'); editModeId = null; setLocalDatetime();
+    expression = '0'; currentScannedBarcode = ""; currentSlipRefNo = ""; display.innerText = expression; document.getElementById('scanned-note').classList.add('hidden'); editModeId = null; setLocalDatetime();
     updateDashboard(); showToast('บันทึกสำเร็จ', 'success');
 
     fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(transactionRecord) });
@@ -476,6 +741,7 @@ function editTransaction(id) {
     const history = JSON.parse(localStorage.getItem('my_tx_history') || '[]'); const tx = history.find(t => t.id === id); if (!tx) return;
     editModeId = id; setType(tx.type); selectedCategory = categories[tx.type].find(c => c.name === tx.categoryName)?.id || categories[tx.type][0].id;
     selectedAccount = accounts.find(a => a.name === tx.accountName)?.id || accounts[0].id; expression = tx.amount.toString(); display.innerText = expression;
+    currentSlipRefNo = tx.slipRefNo || "";
     document.getElementById('tx-date').value = tx.isoDate || new Date().toISOString().slice(0, 16); renderCategories(); renderAccounts(); switchPage('add');
 }
 
@@ -540,7 +806,9 @@ window.switchPage = switchPage;
 window.triggerResetConfirm = triggerResetConfirm;
 window.setType = setType;
 window.processSlipOCR = processSlipOCR;
-window.toggleQRScanner = toggleQRScanner;
+window.startCameraOverlay = startCameraOverlay;
+window.stopCameraOverlay = stopCameraOverlay;
+window.toggleCameraFacing = toggleCameraFacing;
 window.openRecurringModal = openRecurringModal;
 window.closeRecurringModal = closeRecurringModal;
 window.saveRecurringItem = saveRecurringItem;
