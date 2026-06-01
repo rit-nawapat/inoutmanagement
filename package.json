@@ -1,0 +1,13 @@
+{
+  "name": "income-outcome-management",
+  "version": "1.0.0",
+  "description": "ระบบบันทึกเงิน V8.2",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}
