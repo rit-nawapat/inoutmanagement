@@ -10,6 +10,8 @@ let currentSlipRefNo = "";
 let currentScannedBarcode = "";
 let editModeId = null;
 
+let txHistory = JSON.parse(localStorage.getItem('my_tx_history') || '[]');
+
 const thaiMonths = {
     'ม.ค.': 0, 'ก.พ.': 1, 'มี.ค.': 2, 'เม.ย.': 3, 'พ.ค.': 4, 'มิ.ย.': 5,
     'ก.ค.': 6, 'ส.ค.': 7, 'ก.ย.': 8, 'ต.ค.': 9, 'พ.ย.': 10, 'ธ.ค.': 11,
@@ -54,8 +56,6 @@ function formatCurrencyInput(input) {
 
 function parseDateTimeFromOCR(ocrText) {
     const cleanText = ocrText.replace(/\s+/g, ' ');
-    
-    // Match Thai format: 02 มิ.ย. 2569 - 05:28 or 02 มิ.ย. 69 05:28 or 02 มิถุนายน 2569 05:28
     const thaiDateRegex = /(\d{1,2})\s*([ก-ฮ\.]+)\s*(\d{2,4})\s*(?:-|เวลา)?\s*(\d{2}:\d{2})/;
     const thaiDateMatch = cleanText.match(thaiDateRegex);
     if (thaiDateMatch) {
@@ -63,10 +63,10 @@ function parseDateTimeFromOCR(ocrText) {
         const monthStr = thaiDateMatch[2];
         let year = parseInt(thaiDateMatch[3]);
         const time = thaiDateMatch[4];
-        
+
         if (year < 100) year += 2000;
-        if (year > 2500) year -= 543; // Convert B.E. to A.D.
-        
+        if (year > 2500) year -= 543;
+
         const monthIndex = thaiMonths[monthStr] !== undefined ? thaiMonths[monthStr] : 0;
         const [hours, minutes] = time.split(':');
         const d = new Date(year, monthIndex, day, parseInt(hours), parseInt(minutes));
@@ -76,7 +76,6 @@ function parseDateTimeFromOCR(ocrText) {
         }
     }
 
-    // Match English / standard format: DD/MM/YYYY HH:MM or DD-MM-YYYY HH:MM or YYYY-MM-DD HH:MM
     const engDateRegex = /(\d{2})[\/\.-](\d{2})[\/\.-](\d{4}|\d{2})\s+(\d{2}:\d{2})/;
     const engDateMatch = cleanText.match(engDateRegex);
     if (engDateMatch) {
@@ -107,41 +106,19 @@ function parseRefNoFromOCR(ocrText) {
 
 function checkDuplicateSlip(refNo) {
     if (!refNo) return false;
-    const history = JSON.parse(localStorage.getItem('my_tx_history') || '[]');
-    return history.find(tx => tx.slipRefNo === refNo);
+    return txHistory.find(tx => tx.slipRefNo === refNo);
 }
 
 function guessCategoryFromText(ocrText) {
     const text = ocrText.toLowerCase();
     const mappings = [
-        {
-            categoryId: 'bills',
-            keywords: ['ไฟ', 'น้ำ', 'เน็ต', 'อินเทอร์เน็ต', 'โทรศัพท์', 'มือถือ', 'ส่วนกลาง', 'บ้าน', 'คอนโด', 'บัตร', 'ประกัน', 'งวด', 'เช่า', 'bill', 'electric', 'water', 'internet', 'wifi', 'phone', 'condo', 'card', 'insurance']
-        },
-        {
-            categoryId: 'transport',
-            keywords: ['รถ', 'น้ำมัน', 'ทางด่วน', 'บีทีเอส', 'bts', 'mrt', 'แท็กซี่', 'taxi', 'car', 'gas', 'fuel', 'toll', 'ปตท', 'ptt', 'shell', 'bangchak', 'บางจาก', 'เชลล์']
-        },
-        {
-            categoryId: 'food',
-            keywords: ['อาหาร', 'ข้าว', 'กิน', 'ชาบู', 'หมูกระทะ', 'บุฟเฟต์', 'food', 'shabu', 'buffet', 'lunch', 'dinner', 'kfc', 'mcdonald', 'ร้านอาหาร', 'ก๋วยเตี๋ยว', 'คาเฟ่', 'coffee', 'starbucks', 'ส้มตำ', 'ชาไข่มุก']
-        },
-        {
-            categoryId: 'beverage',
-            keywords: ['กาแฟ', 'ชา', 'นม', 'น้ำดื่ม', 'เบียร์', 'เหล้า', 'coffee', 'tea', 'drink', 'beverage', 'beer']
-        },
-        {
-            categoryId: 'grocery',
-            keywords: ['ของใช้', 'สบู่', 'ยาสีฟัน', 'แชมพู', 'ซื้อของ', 'ห้าง', 'โลตัส', 'เซเว่น', 'grocery', 'shopping', 'supermarket', '7-eleven', '7-11', 'lotus', 'bigc', 'big c', 'makro', 'tops', 'cj']
-        },
-        {
-            categoryId: 'entertainment',
-            keywords: ['บันเทิง', 'หนัง', 'เน็ตฟลิกส์', 'netflix', 'youtube', 'disney', 'spotify', 'เกม', 'game', 'movie', 'sf', 'major']
-        },
-        {
-            categoryId: 'travel',
-            keywords: ['เที่ยว', 'ตั๋ว', 'บิน', 'เครื่องบิน', 'โรงแรม', 'travel', 'hotel', 'flight', 'trip']
-        }
+        { categoryId: 'bills', keywords: ['ไฟ', 'น้ำ', 'เน็ต', 'อินเทอร์เน็ต', 'โทรศัพท์', 'มือถือ', 'ส่วนกลาง', 'บ้าน', 'คอนโด', 'บัตร', 'ประกัน', 'งวด', 'เช่า', 'bill', 'electric', 'water', 'internet', 'wifi', 'phone', 'condo', 'card', 'insurance'] },
+        { categoryId: 'transport', keywords: ['รถ', 'น้ำมัน', 'ทางด่วน', 'บีทีเอส', 'bts', 'mrt', 'แท็กซี่', 'taxi', 'car', 'gas', 'fuel', 'toll', 'ปตท', 'ptt', 'shell', 'bangchak', 'บางจาก', 'เชลล์'] },
+        { categoryId: 'food', keywords: ['อาหาร', 'ข้าว', 'กิน', 'ชาบู', 'หมูกระทะ', 'บุฟเฟต์', 'food', 'shabu', 'buffet', 'lunch', 'dinner', 'kfc', 'mcdonald', 'ร้านอาหาร', 'ก๋วยเตี๋ยว', 'คาเฟ่', 'coffee', 'starbucks', 'ส้มตำ', 'ชาไข่มุก'] },
+        { categoryId: 'beverage', keywords: ['กาแฟ', 'ชา', 'นม', 'น้ำดื่ม', 'เบียร์', 'เหล้า', 'coffee', 'tea', 'drink', 'beverage', 'beer'] },
+        { categoryId: 'grocery', keywords: ['ของใช้', 'สบู่', 'ยาสีฟัน', 'แชมพู', 'ซื้อของ', 'ห้าง', 'โลตัส', 'เซเว่น', 'grocery', 'shopping', 'supermarket', '7-eleven', '7-11', 'lotus', 'bigc', 'big c', 'makro', 'tops', 'cj'] },
+        { categoryId: 'entertainment', keywords: ['บันเทิง', 'หนัง', 'เน็ตฟลิกส์', 'netflix', 'youtube', 'disney', 'spotify', 'เกม', 'game', 'movie', 'sf', 'major'] },
+        { categoryId: 'travel', keywords: ['เที่ยว', 'ตั๋ว', 'บิน', 'เครื่องบิน', 'โรงแรม', 'travel', 'hotel', 'flight', 'trip'] }
     ];
 
     for (const mapping of mappings) {
@@ -155,11 +132,9 @@ function processSlipOCR(fileInput) {
     const file = fileInput.files[0];
     if (!file) return;
     showToast('กำลังแกะข้อมูลจากสลิป...', 'success');
-    
+
     Tesseract.recognize(file, 'tha+eng').then(({ data: { text } }) => {
         let detectedAmount = 0;
-        
-        // 1. Extract Amount
         const moneyRegex = /(?:จำนวนเงิน|ยอดโอน|บาท|amt|amount)[\s\S]{0,15}?([0-9,]+\.[0-9]{2})/i;
         let match = text.replace(/ /g, '').match(moneyRegex);
         if (match && match[1]) {
@@ -168,7 +143,7 @@ function processSlipOCR(fileInput) {
             const genericAmountRegex = /\b([0-9,]+\.[0-9]{2})\b/g;
             let allAmounts = []; let m;
             while ((m = genericAmountRegex.exec(text.replace(/ /g, ''))) !== null) {
-                let val = parseFloat(m[1].replace(/,/g, '')); 
+                let val = parseFloat(m[1].replace(/,/g, ''));
                 if (!isNaN(val) && val > 0) allAmounts.push(val);
             }
             if (allAmounts.length > 0) {
@@ -178,17 +153,15 @@ function processSlipOCR(fileInput) {
 
         if (detectedAmount > 0) {
             playScanSuccessSound();
-            expression = detectedAmount.toString(); 
+            expression = detectedAmount.toString();
             display.innerText = expression;
-            
-            // 2. Parse Date and Time
+
             const parsedDate = parseDateTimeFromOCR(text);
             if (parsedDate) {
                 document.getElementById('tx-date').value = parsedDate;
                 showToast('ปรับปรุงวันที่และเวลาตามสลิป', 'success');
             }
-            
-            // 3. Parse Reference Number & Check Duplicate
+
             const refNo = parseRefNoFromOCR(text);
             currentSlipRefNo = refNo || "";
             if (refNo) {
@@ -200,30 +173,28 @@ function processSlipOCR(fileInput) {
                 }
             }
 
-            // 4. Smart Category Guessing
             const guessedCatId = guessCategoryFromText(text);
             if (guessedCatId) {
                 selectedCategory = guessedCatId;
                 renderCategories();
             }
 
-            // 5. AUTO-SELECT BANK PAYMENT CHANNEL
             selectedAccount = 'qrscan';
             renderAccounts();
-            
-            currentScannedBarcode = refNo ? `สลิปโอนเงิน (Ref: ${refNo})` : "สลิปโอนเงิน (OCR)"; 
-            document.getElementById('scanned-note').innerHTML = `<i data-lucide="file-text" class="w-3 h-3 inline-block"></i> ฿${detectedAmount} ${refNo ? `[${refNo.slice(-6)}]` : ''}`; 
-            document.getElementById('scanned-note').classList.remove('hidden'); 
+
+            currentScannedBarcode = refNo ? `สลิปโอนเงิน (Ref: ${refNo})` : "สลิปโอนเงิน (OCR)";
+            document.getElementById('scanned-note').innerHTML = `<i data-lucide="file-text" class="w-3 h-3 inline-block"></i> ฿${detectedAmount} ${refNo ? `[${refNo.slice(-6)}]` : ''}`;
+            document.getElementById('scanned-note').classList.remove('hidden');
             lucide.createIcons();
-            
+
             showToast(`สแกนสลิปสำเร็จ ยอด ฿${detectedAmount}`, 'success');
-        } else { 
-            showToast('ไม่พบยอดเงิน กรุณาพิมพ์ระบุเอง', 'error'); 
+        } else {
+            showToast('ไม่พบยอดเงิน กรุณาพิมพ์ระบุเอง', 'error');
         }
-    }).catch(err => { 
-        showToast('สแกนไม่สำเร็จ หรือรูปภาพไม่ชัดเจน', 'error'); 
-    }).finally(() => { 
-        fileInput.value = ""; 
+    }).catch(err => {
+        showToast('สแกนไม่สำเร็จ หรือรูปภาพไม่ชัดเจน', 'error');
+    }).finally(() => {
+        fileInput.value = "";
     });
 }
 
@@ -274,9 +245,8 @@ function guessAccountForCategory(categoryId) {
     const categoryObj = (categories.spent.find(c => c.id === categoryId) || categories.income.find(c => c.id === categoryId));
     if (!categoryObj) return null;
 
-    const history = JSON.parse(localStorage.getItem('my_tx_history') || '[]');
-    const matchingTx = history.filter(tx => tx.categoryName === categoryObj.name && tx.type === 'spent');
-    
+    const matchingTx = txHistory.filter(tx => tx.categoryName === categoryObj.name && tx.type === 'spent');
+
     if (matchingTx.length > 0) {
         const counts = {};
         matchingTx.forEach(tx => {
@@ -285,7 +255,7 @@ function guessAccountForCategory(categoryId) {
                 counts[acc.id] = (counts[acc.id] || 0) + 1;
             }
         });
-        
+
         let bestAccountId = null;
         let maxCount = 0;
         for (const accId in counts) {
@@ -296,8 +266,7 @@ function guessAccountForCategory(categoryId) {
         }
         if (bestAccountId) return bestAccountId;
     }
-    
-    // Fallback guesses if no history
+
     if (categoryId === 'food' || categoryId === 'beverage') {
         return 'qrscan';
     } else if (categoryId === 'bills') {
@@ -313,9 +282,9 @@ function renderCategories() {
     categories[currentType].forEach(cat => {
         const isSelected = cat.id === selectedCategory; const item = document.createElement('div');
         item.className = "flex-shrink-0 flex flex-col items-center cursor-pointer snap-start min-w-[50px]";
-        item.onclick = () => { 
-            selectedCategory = cat.id; 
-            renderCategories(); 
+        item.onclick = () => {
+            selectedCategory = cat.id;
+            renderCategories();
             if (currentType === 'spent') {
                 const guessedAccId = guessAccountForCategory(cat.id);
                 if (guessedAccId && guessedAccId !== selectedAccount) {
@@ -358,8 +327,8 @@ function playScanSuccessSound() {
         gainNode.connect(audioCtx.destination);
 
         oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
 
         oscillator.start();
         gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
@@ -372,9 +341,9 @@ function playScanSuccessSound() {
 function startCameraOverlay() {
     const overlay = document.getElementById('camera-overlay');
     overlay.classList.remove('hidden');
-    
+
     if (html5QrCode) {
-        html5QrCode.stop().catch(() => {}).finally(() => {
+        html5QrCode.stop().catch(() => { }).finally(() => {
             html5QrCode = null;
             initCamera();
         });
@@ -392,6 +361,7 @@ function initCamera() {
             const boxSize = Math.min(minSize * 0.7, 280);
             return { width: boxSize, height: boxSize };
         },
+        aspectRatio: window.innerHeight / window.innerWidth,
         videoConstraints: {
             facingMode: currentFacingMode,
             focusMode: "continuous",
@@ -401,7 +371,7 @@ function initCamera() {
             ]
         }
     };
-    
+
     html5QrCode.start(
         { facingMode: currentFacingMode },
         config,
@@ -410,9 +380,7 @@ function initCamera() {
             handleScannedResult(decodedText);
             stopCameraOverlay();
         },
-        (errorMessage) => {
-            // Ignore ongoing frame scanning errors
-        }
+        (errorMessage) => { }
     ).catch(err => {
         showToast("ไม่สามารถเปิดกล้องได้: " + err, "error");
         stopCameraOverlay();
@@ -435,48 +403,61 @@ function toggleCameraFacing() {
     currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
     showToast("สลับกล้องเป็น: " + (currentFacingMode === "environment" ? "กล้องหลัง" : "กล้องหน้า"), "success");
     if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-            initCamera();
-        }).catch(() => {
-            initCamera();
-        });
+        html5QrCode.stop().then(() => { initCamera(); }).catch(() => { initCamera(); });
     }
 }
 
 function handleScannedResult(decodedText) {
+    // 1. ดักจับสแกน PromptPay
     if (decodedText.startsWith("000201")) {
         const amountMatch = decodedText.match(/54\d{2}(\d+\.\d{2})/);
         if (amountMatch && amountMatch[1]) {
-            let slipAmount = parseFloat(amountMatch[1]); 
-            expression = slipAmount.toString(); 
+            let slipAmount = parseFloat(amountMatch[1]);
+            expression = slipAmount.toString();
             display.innerText = expression;
-            currentScannedBarcode = "สลิปพร้อมเพย์ (QR)"; 
-            document.getElementById('scanned-note').innerHTML = `<i data-lucide="qr-code" class="w-3 h-3 inline-block"></i> ฿${slipAmount}`; 
-            document.getElementById('scanned-note').classList.remove('hidden'); 
-            lucide.createIcons(); 
-            
+            currentScannedBarcode = "สลิปพร้อมเพย์ (QR)";
+            document.getElementById('scanned-note').innerHTML = `<i data-lucide="qr-code" class="w-3 h-3 inline-block"></i> ฿${slipAmount}`;
+            document.getElementById('scanned-note').classList.remove('hidden');
+            lucide.createIcons();
+
             selectedAccount = 'qrscan';
             renderAccounts();
-            
-            showToast(`พบยอด ฿${slipAmount} และเลือกช่องสแกนจ่ายออโต้`, 'success'); 
+
+            showToast(`พบยอด ฿${slipAmount} และเลือกช่องสแกนจ่ายออโต้`, 'success');
             return;
         }
     }
-    
+
+    // 2. คลังข้อมูลส่วนตัว (ใส่บาร์โค้ดของที่ใช้ประจำ)
+    const myFrequentItems = {
+        "8850250012345": "กาแฟ Birdy Green Zero",
+        "8851111111111": "Honda Giorno+ ค่าซ่อมบำรุง",
+    };
+
+    if (myFrequentItems[decodedText]) {
+        currentScannedBarcode = myFrequentItems[decodedText];
+        document.getElementById('scanned-note').innerHTML = `<i data-lucide="package" class="w-3 h-3 inline-block"></i> ${currentScannedBarcode}`;
+        document.getElementById('scanned-note').classList.remove('hidden');
+        lucide.createIcons();
+        showToast(`พบสินค้า: ${currentScannedBarcode}`, 'success');
+        return;
+    }
+
+    // 3. ถ้าไม่เจอ ค่อยวิ่งไปถาม API ภายนอก
     showToast("กำลังค้นหาข้อมูลสินค้า...", "success");
     fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`).then(res => res.json()).then(data => {
         let pName = (data.status === 1 && data.product) ? (data.product.product_name_th || data.product.product_name) : null;
-        currentScannedBarcode = pName || `รหัส: ${decodedText}`; 
-        document.getElementById('scanned-note').innerHTML = `<i data-lucide="package" class="w-3 h-3 inline-block"></i> ${currentScannedBarcode}`; 
-        document.getElementById('scanned-note').classList.remove('hidden'); 
+        currentScannedBarcode = pName || `รหัส: ${decodedText}`;
+        document.getElementById('scanned-note').innerHTML = `<i data-lucide="package" class="w-3 h-3 inline-block"></i> ${currentScannedBarcode}`;
+        document.getElementById('scanned-note').classList.remove('hidden');
         lucide.createIcons();
         showToast(`พบสินค้า: ${pName || decodedText}`, 'success');
     }).catch(() => {
-        currentScannedBarcode = `รหัส: ${decodedText}`; 
-        document.getElementById('scanned-note').innerHTML = `<i data-lucide="search" class="w-3 h-3 inline-block"></i> ${decodedText}`; 
-        document.getElementById('scanned-note').classList.remove('hidden'); 
+        currentScannedBarcode = `รหัส: ${decodedText}`;
+        document.getElementById('scanned-note').innerHTML = `<i data-lucide="search" class="w-3 h-3 inline-block"></i> ${decodedText}`;
+        document.getElementById('scanned-note').classList.remove('hidden');
         lucide.createIcons();
-        showToast(`พบรหัสสินค้า: ${decodedText}`, 'success');
+        showToast(`พบรหัส: ${decodedText}`, 'success');
     });
 }
 
@@ -487,12 +468,11 @@ function handleScannedResult(decodedText) {
 function getRecurringItems() { return JSON.parse(localStorage.getItem('my_recurring_list') || '[]'); }
 
 function updateRecurringSummary() {
-    const history = JSON.parse(localStorage.getItem('my_tx_history') || '[]');
     const recurring = getRecurringItems();
     const currentMonth = new Date().getMonth(); const currentYear = new Date().getFullYear();
     let thisMonthIncome = 0;
 
-    history.forEach(tx => {
+    txHistory.forEach(tx => {
         if (tx.type === 'income' && tx.isoDate) {
             let txDate = new Date(tx.isoDate);
             if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) thisMonthIncome += tx.amount;
@@ -557,45 +537,22 @@ function renderRecurringList() {
 function autoSelectCategoryByName(name) {
     if (!name) return;
     name = name.toLowerCase().trim();
-    
+
     const mappings = [
-        {
-            categoryId: 'bills',
-            keywords: ['ไฟ', 'น้ำ', 'เน็ต', 'อินเทอร์เน็ต', 'โทรศัพท์', 'มือถือ', 'ส่วนกลาง', 'บ้าน', 'คอนโด', 'บัตร', 'ประกัน', 'งวด', 'เช่า', 'bill', 'electric', 'water', 'internet', 'wifi', 'phone', 'condo', 'card', 'insurance']
-        },
-        {
-            categoryId: 'transport',
-            keywords: ['รถ', 'น้ำมัน', 'ทางด่วน', 'บีทีเอส', 'bts', 'mrt', 'แท็กซี่', 'taxi', 'car', 'gas', 'fuel', 'toll']
-        },
-        {
-            categoryId: 'food',
-            keywords: ['อาหาร', 'ข้าว', 'กิน', 'ชาบู', 'หมูกระทะ', 'บุฟเฟต์', 'food', 'shabu', 'buffet', 'lunch', 'dinner']
-        },
-        {
-            categoryId: 'beverage',
-            keywords: ['กาแฟ', 'ชา', 'นม', 'น้ำดื่ม', 'เบียร์', 'เหล้า', 'คาเฟ่', 'coffee', 'tea', 'milk', 'drink', 'beverage', 'beer', 'cafe']
-        },
-        {
-            categoryId: 'grocery',
-            keywords: ['ของใช้', 'สบู่', 'ยาสีฟัน', 'แชมพู', 'ซื้อของ', 'ห้าง', 'โลตัส', 'เซเว่น', 'grocery', 'shopping', 'supermarket']
-        },
-        {
-            categoryId: 'entertainment',
-            keywords: ['บันเทิง', 'หนัง', 'เน็ตฟลิกส์', 'netflix', 'youtube', 'disney', 'spotify', 'เกม', 'game', 'movie']
-        },
-        {
-            categoryId: 'travel',
-            keywords: ['เที่ยว', 'ตั๋ว', 'บิน', 'เครื่องบิน', 'โรงแรม', 'travel', 'hotel', 'flight', 'trip']
-        }
+        { categoryId: 'bills', keywords: ['ไฟ', 'น้ำ', 'เน็ต', 'อินเทอร์เน็ต', 'โทรศัพท์', 'มือถือ', 'ส่วนกลาง', 'บ้าน', 'คอนโด', 'บัตร', 'ประกัน', 'งวด', 'เช่า', 'bill', 'electric', 'water', 'internet', 'wifi', 'phone', 'condo', 'card', 'insurance'] },
+        { categoryId: 'transport', keywords: ['รถ', 'น้ำมัน', 'ทางด่วน', 'บีทีเอส', 'bts', 'mrt', 'แท็กซี่', 'taxi', 'car', 'gas', 'fuel', 'toll'] },
+        { categoryId: 'food', keywords: ['อาหาร', 'ข้าว', 'กิน', 'ชาบู', 'หมูกระทะ', 'บุฟเฟต์', 'food', 'shabu', 'buffet', 'lunch', 'dinner'] },
+        { categoryId: 'beverage', keywords: ['กาแฟ', 'ชา', 'นม', 'น้ำดื่ม', 'เบียร์', 'เหล้า', 'คาเฟ่', 'coffee', 'tea', 'milk', 'drink', 'beverage', 'beer', 'cafe'] },
+        { categoryId: 'grocery', keywords: ['ของใช้', 'สบู่', 'ยาสีฟัน', 'แชมพู', 'ซื้อของ', 'ห้าง', 'โลตัส', 'เซเว่น', 'grocery', 'shopping', 'supermarket'] },
+        { categoryId: 'entertainment', keywords: ['บันเทิง', 'หนัง', 'เน็ตฟลิกส์', 'netflix', 'youtube', 'disney', 'spotify', 'เกม', 'game', 'movie'] },
+        { categoryId: 'travel', keywords: ['เที่ยว', 'ตั๋ว', 'บิน', 'เครื่องบิน', 'โรงแรม', 'travel', 'hotel', 'flight', 'trip'] }
     ];
 
     for (const mapping of mappings) {
         const matched = mapping.keywords.some(keyword => name.includes(keyword));
         if (matched) {
             const selectEl = document.getElementById('req-category');
-            if (selectEl) {
-                selectEl.value = mapping.categoryId;
-            }
+            if (selectEl) { selectEl.value = mapping.categoryId; }
             break;
         }
     }
@@ -654,7 +611,6 @@ function saveRecurringItem() {
     localStorage.setItem('my_recurring_list', JSON.stringify(items));
     closeRecurringModal(); renderRecurringList(); updateRecurringSummary(); showToast('บันทึกรายการสำเร็จ', 'success');
 
-    // ยิงเข้า Sheet แผ่น 'Recurring'
     fetch(GOOGLE_SHEET_API_URL, {
         method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ sheetName: 'Recurring', action: id ? 'edit' : 'add', ...newItem })
@@ -691,25 +647,83 @@ function payRecurringItem(id) {
         date: new Date().toLocaleString('th-TH'), isoDate: new Date().toISOString().slice(0, 16), action: 'add', sheetName: 'Sheet1'
     };
 
-    let currentHistory = JSON.parse(localStorage.getItem('my_tx_history') || '[]');
-    currentHistory.unshift({ ...transactionRecord, categoryIcon: matchedCat.icon, accountIcon: matchedAcc.icon });
-    currentHistory.sort((a, b) => new Date(b.isoDate) - new Date(a.isoDate));
-    localStorage.setItem('my_tx_history', JSON.stringify(currentHistory));
+    const uiRecord = {
+        ...transactionRecord,
+        categoryIcon: matchedCat.icon,
+        accountIcon: matchedAcc.icon
+    };
 
+    txHistory.unshift(uiRecord);
+    txHistory.sort((a, b) => b.id - a.id);
+    localStorage.setItem('my_tx_history', JSON.stringify(txHistory));
     updateDashboard(); updateRecurringSummary(); renderRecurringList();
     showToast(`จ่าย ${item.name} สำเร็จ`, 'success');
 
-    // บันทึกลง Sheet1 (ประวัติการใช้จ่าย)
     fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(transactionRecord) });
-    // อัปเดตสถานะในหน้า Recurring
     fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ sheetName: 'Recurring', action: 'edit', ...item }) });
 }
 
-// --- บันทึก, ลบ และสรุปผลประวัติประมวลผลดั้งเดิม ---
+// ----------------------------------------------------------------------
+// ซิงค์และประมวลผลข้อมูล (Memory-based)
+// ----------------------------------------------------------------------
+
+async function syncDataFromSheet() {
+    // ดึงข้อมูลเงียบๆ อยู่เบื้องหลัง ไม่ต้อง showToast แจ้งเตือนตอนเริ่ม
+    try {
+        const response = await fetch(GOOGLE_SHEET_API_URL);
+        const data = await response.json();
+
+        let isUpdated = false;
+
+        if (data && data.history) {
+            txHistory = data.history.map(item => {
+                const catObj = categories[item.type]?.find(c => c.name === item.categoryName);
+                const accObj = accounts.find(a => a.name === item.accountName);
+                return {
+                    ...item,
+                    categoryIcon: catObj ? catObj.icon : 'help-circle',
+                    accountIcon: accObj ? accObj.icon : 'banknote'
+                };
+            });
+            txHistory.sort((a, b) => b.id - a.id);
+            // อัปเดต Cache ในเครื่องให้สดใหม่เท่ากับบนคลาวด์
+            localStorage.setItem('my_tx_history', JSON.stringify(txHistory));
+            isUpdated = true;
+        }
+
+        if (data && data.recurring) {
+            const mappedRecurring = data.recurring.map(item => {
+                const catObj = categories.spent.find(c => c.name === item.category);
+                const accObj = accounts.find(a => a.name === item.account);
+                const colorMap = { 'utensils': 'bg-orange-100 text-orange-600', 'coffee': 'bg-amber-100 text-amber-600', 'shopping-cart': 'bg-emerald-100 text-emerald-600', 'car': 'bg-blue-100 text-blue-600', 'clapperboard': 'bg-purple-100 text-purple-600', 'receipt': 'bg-rose-100 text-rose-600', 'palmtree': 'bg-teal-100 text-teal-600', 'help-circle': 'bg-slate-100 text-slate-600' };
+                return {
+                    ...item,
+                    categoryId: catObj ? catObj.id : 'other_exp',
+                    accountId: accObj ? accObj.id : 'cash',
+                    icon: catObj ? catObj.icon : 'help-circle',
+                    color: catObj ? (colorMap[catObj.icon] || 'bg-slate-100 text-slate-600') : 'bg-slate-100 text-slate-600',
+                    fav: false
+                };
+            });
+            localStorage.setItem('my_recurring_list', JSON.stringify(mappedRecurring));
+            isUpdated = true;
+        }
+
+        // ถ้ายิง API สำเร็จและมีข้อมูลใหม่ ให้รีเฟรชหน้าจอเบาๆ
+        if (isUpdated) {
+            updateDashboard();
+            if (currentPage === 'history') renderHistory();
+            if (currentPage === 'list') { renderRecurringList(); updateRecurringSummary(); }
+        }
+    } catch (error) {
+        console.error("Sync Error (ใช้งานโหมด Offline):", error);
+        // ไม่ต้องแจ้งเตือน error ปล่อยให้ผู้ใช้ดูข้อมูลเก่าจาก LocalStorage ต่อไป
+    }
+}
+
 function updateDashboard() {
-    const logData = JSON.parse(localStorage.getItem('my_tx_history') || '[]');
     let i = 0, s = 0;
-    logData.forEach(e => { if (e.type === 'income') i += e.amount; if (e.type === 'spent') s += e.amount; });
+    txHistory.forEach(e => { if (e.type === 'income') i += e.amount; if (e.type === 'spent') s += e.amount; });
     document.getElementById('dash-income').innerText = `฿${i.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     document.getElementById('dash-spent').innerText = `฿${s.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     document.getElementById('dash-balance').innerText = `฿${(i - s).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
@@ -726,19 +740,32 @@ function saveTransaction() {
         action: editModeId ? 'edit' : 'add', sheetName: 'Sheet1'
     };
 
-    let currentHistory = JSON.parse(localStorage.getItem('my_tx_history') || '[]');
-    if (editModeId) { const index = currentHistory.findIndex(t => t.id === editModeId); if (index > -1) currentHistory[index] = { ...transactionRecord, categoryIcon: matchedCat.icon, accountIcon: matchedAcc.icon }; }
-    else { currentHistory.unshift({ ...transactionRecord, categoryIcon: matchedCat.icon, accountIcon: matchedAcc.icon }); }
+    const uiRecord = {
+        ...transactionRecord,
+        categoryIcon: matchedCat ? matchedCat.icon : 'help-circle',
+        accountIcon: matchedAcc ? matchedAcc.icon : 'banknote'
+    };
 
-    localStorage.setItem('my_tx_history', JSON.stringify(currentHistory));
+    if (editModeId) {
+        const index = txHistory.findIndex(t => t.id === editModeId);
+        if (index > -1) txHistory[index] = uiRecord;
+    }
+    else {
+        txHistory.unshift(uiRecord);
+    }
+
+    // [ส่วนที่เพิ่มใหม่] บันทึกลง Cache ในมือถือ
+    localStorage.setItem('my_tx_history', JSON.stringify(txHistory));
+
     expression = '0'; currentScannedBarcode = ""; currentSlipRefNo = ""; display.innerText = expression; document.getElementById('scanned-note').classList.add('hidden'); editModeId = null; setLocalDatetime();
-    updateDashboard(); showToast('บันทึกสำเร็จ', 'success');
+    updateDashboard(); if (currentPage === 'history') renderHistory(); showToast('บันทึกสำเร็จ', 'success');
 
+    // ส่งไปเซฟบน Google Sheets เป็น Background
     fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(transactionRecord) });
 }
 
 function editTransaction(id) {
-    const history = JSON.parse(localStorage.getItem('my_tx_history') || '[]'); const tx = history.find(t => t.id === id); if (!tx) return;
+    const tx = txHistory.find(t => t.id === id); if (!tx) return;
     editModeId = id; setType(tx.type); selectedCategory = categories[tx.type].find(c => c.name === tx.categoryName)?.id || categories[tx.type][0].id;
     selectedAccount = accounts.find(a => a.name === tx.accountName)?.id || accounts[0].id; expression = tx.amount.toString(); display.innerText = expression;
     currentSlipRefNo = tx.slipRefNo || "";
@@ -746,16 +773,25 @@ function editTransaction(id) {
 }
 
 function deleteTransaction(id) { triggerResetConfirm('delete_item', id); }
+
 function executeDelete(id) {
-    let history = JSON.parse(localStorage.getItem('my_tx_history') || '[]'); history = history.filter(t => t.id !== id);
-    localStorage.setItem('my_tx_history', JSON.stringify(history)); updateDashboard(); renderHistory();
+    txHistory = txHistory.filter(t => t.id !== id);
+    localStorage.setItem('my_tx_history', JSON.stringify(txHistory));
+    updateDashboard(); renderHistory();
     fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'delete', id: id, sheetName: 'Sheet1' }) });
 }
 
 function renderHistory() {
-    const listSection = document.getElementById('history-list'); const storedHistory = JSON.parse(localStorage.getItem('my_tx_history') || '[]'); document.getElementById('history-count').innerText = `${storedHistory.length} รายการ`; listSection.innerHTML = '';
-    if (storedHistory.length === 0) { listSection.innerHTML = `<div class="text-center py-10 text-slate-400"><i data-lucide="folder-open" class="w-6 h-6 mx-auto mb-1"></i><span class="text-[10px]">ยังไม่พบประวัติ</span></div>`; lucide.createIcons(); return; }
-    storedHistory.forEach(data => {
+    const listSection = document.getElementById('history-list');
+    document.getElementById('history-count').innerText = `${txHistory.length} รายการ`;
+    listSection.innerHTML = '';
+
+    if (txHistory.length === 0) {
+        listSection.innerHTML = `<div class="text-center py-10 text-slate-400"><i data-lucide="folder-open" class="w-6 h-6 mx-auto mb-1"></i><span class="text-[10px]">ยังไม่พบประวัติ</span></div>`;
+        lucide.createIcons();
+        return;
+    }
+    txHistory.forEach(data => {
         const block = document.createElement('div'); block.className = "flex justify-between items-center p-3 bg-white rounded-xl border border-slate-200";
         block.innerHTML = `
             <div class="flex items-center space-x-2">
@@ -791,7 +827,7 @@ function triggerResetConfirm(type = 'all', id = null) {
     document.getElementById('custom-confirm-dialog').classList.remove('hidden');
     onConfirmCallback = (isConfirmed) => {
         if (isConfirmed) {
-            if (type === 'all') { localStorage.removeItem('my_tx_history'); expression = '0'; display.innerText = expression; updateDashboard(); if (currentPage === 'history') renderHistory(); showToast('ล้างข้อมูล', 'success'); }
+            if (type === 'all') { txHistory = []; expression = '0'; display.innerText = expression; updateDashboard(); if (currentPage === 'history') renderHistory(); showToast('ล้างข้อมูล', 'success'); }
             else if (type === 'delete_item') { executeDelete(id); }
             else if (type === 'delete_recurring') { executeDeleteRecurring(id); }
         }
@@ -799,7 +835,15 @@ function triggerResetConfirm(type = 'all', id = null) {
 }
 function closeConfirmDialog(result) { document.getElementById('custom-confirm-dialog').classList.add('hidden'); if (onConfirmCallback) { onConfirmCallback(result); onConfirmCallback = null; } }
 
-document.addEventListener('DOMContentLoaded', () => { lucide.createIcons(); setLocalDatetime(); renderCategories(); renderAccounts(); updateDashboard(); switchPage('add'); });
+document.addEventListener('DOMContentLoaded', () => {
+    lucide.createIcons();
+    setLocalDatetime();
+    renderCategories();
+    renderAccounts();
+    updateDashboard();
+    switchPage('add');
+    syncDataFromSheet();
+});
 
 // Expose functions globally for HTML inline event handlers
 window.switchPage = switchPage;

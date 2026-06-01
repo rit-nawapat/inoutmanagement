@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ระบบบันทึกเงิน V8.2</title>
+    <title>ระบบบันทึกเงิน</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
     <meta name="mobile-web-app-capable" content="yes">
@@ -86,8 +86,8 @@
                 </section>
 
                 <!-- PAGE: RECURRING LIST -->
-                <section id="page-list"
-                    class="hidden w-full max-w-5xl mx-auto flex-col h-fit max-h-full shrink-0 space-y-4">
+                <section id="page-list" class="hidden w-full max-w-5xl mx-auto flex-col h-full space-y-4">
+
                     <div
                         class="bg-[#5b3df0] text-white p-5 rounded-3xl shadow-lg grid grid-cols-2 gap-3 relative overflow-hidden shrink-0">
                         <div class="col-span-1 border-r border-indigo-400/30 pr-3">
@@ -105,9 +105,10 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                    <div
+                        class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
                         <div
-                            class="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-slate-100 gap-3">
+                            class="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-slate-100 gap-3 shrink-0">
                             <div>
                                 <h2 class="text-base font-bold text-slate-800">รายจ่ายที่จ่ายทุกเดือน</h2>
                                 <p class="text-[10px] text-slate-500 mt-0.5">ระบบจะรีเซ็ตสถานะเป็น "ยังไม่จ่าย"
@@ -118,6 +119,7 @@
                                 <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มรายการประจำ
                             </button>
                         </div>
+
                         <div
                             class="hidden md:grid grid-cols-12 gap-4 px-6 py-2 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0">
                             <div class="col-span-3">รายการ</div>
@@ -127,8 +129,8 @@
                             <div class="col-span-1 text-center">สถานะ</div>
                             <div class="col-span-2 text-center">จัดการ</div>
                         </div>
-                        <div class="overflow-y-auto p-1 md:p-0 no-scrollbar min-h-[200px]"
-                            id="recurring-list-container"></div>
+
+                        <div class="overflow-y-auto p-1 md:p-0 no-scrollbar flex-1" id="recurring-list-container"></div>
                     </div>
                 </section>
 
@@ -366,53 +368,60 @@
     </div>
 
     <!-- Dedicated Camera Overlay (Full-screen) -->
-    <div id="camera-overlay" class="fixed inset-0 bg-slate-950 z-50 hidden flex flex-col justify-between select-none">
-        <!-- Top bar -->
-        <div class="p-4 flex justify-between items-center bg-slate-900/80 backdrop-blur-md border-b border-slate-800 text-white shrink-0 z-10">
-            <div class="flex items-center space-x-2">
-                <div class="bg-indigo-600 p-1.5 rounded-lg text-white">
-                    <i data-lucide="scan-line" class="w-4 h-4"></i>
-                </div>
-                <span class="font-bold text-sm tracking-tight">สแกน QR / บาร์โค้ด</span>
-            </div>
-            <button onclick="stopCameraOverlay()" class="p-2 hover:bg-slate-800 rounded-full transition-colors cursor-pointer">
-                <i data-lucide="x" class="w-5 h-5 text-slate-300"></i>
-            </button>
-        </div>
+    <div id="camera-overlay" class="fixed inset-0 bg-black z-50 hidden select-none">
+        <div id="camera-preview" class="absolute inset-0 w-full h-full"></div>
 
-        <!-- Camera scanning area -->
-        <div class="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
-            <!-- Low-level Html5Qrcode video target -->
-            <div id="camera-preview" class="absolute inset-0 w-full h-full object-cover"></div>
-            
-            <!-- Scanning Grid and Red Laser line -->
-            <div class="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] rounded-3xl border-2 border-white/30 overflow-hidden shadow-[0_0_0_9999px_rgba(15,23,42,0.7)] z-10 transition-all duration-300">
-                <!-- Red Corner guides -->
-                <div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-rose-500 rounded-tl-lg"></div>
-                <div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-rose-500 rounded-tr-lg"></div>
-                <div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-rose-500 rounded-bl-lg"></div>
-                <div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-rose-500 rounded-br-lg"></div>
-                
-                <!-- Red Laser Scan line -->
-                <div class="absolute top-0 left-0 right-0 h-[2px] bg-rose-500 shadow-[0_0_8px_2px_rgba(244,63,94,0.8)] animate-scanner-laser"></div>
+        <div class="absolute inset-0 z-10 pointer-events-none flex flex-col">
+            <div class="flex-1 bg-black/60 backdrop-blur-sm"></div>
+            <div class="flex h-[280px] sm:h-[320px] shrink-0">
+                <div class="flex-1 bg-black/60 backdrop-blur-sm"></div>
+
+                <div
+                    class="w-[280px] sm:w-[320px] relative shrink-0 border-2 border-white/60 rounded-3xl overflow-hidden box-border z-20">
+                    <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-[22px]">
+                    </div>
+                    <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-[22px]">
+                    </div>
+                    <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-[22px]">
+                    </div>
+                    <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-[22px]">
+                    </div>
+
+                    <div
+                        class="absolute top-0 left-0 right-0 h-[2px] bg-rose-500 shadow-[0_0_12px_3px_rgba(244,63,94,0.9)] animate-scanner-laser">
+                    </div>
+                </div>
+
+                <div class="flex-1 bg-black/60 backdrop-blur-sm"></div>
             </div>
-            
-            <!-- Bottom Helper Text inside viewport -->
-            <div class="absolute bottom-6 left-4 right-4 text-center z-10">
-                <p class="text-xs font-semibold text-white/90 drop-shadow bg-slate-900/60 py-1.5 px-4 rounded-full inline-block">
-                    จัดให้ QR หรือบาร์โค้ดสินค้า อยู่ในกรอบสีแดงเพื่อสแกน
+            <div class="flex-1 bg-black/60 backdrop-blur-sm relative">
+                <p
+                    class="absolute top-8 left-1/2 -translate-x-1/2 text-[11px] font-bold text-white drop-shadow bg-black/40 py-2.5 px-6 rounded-full whitespace-nowrap border border-white/10 tracking-wide">
+                    จัดให้อยู่ในกรอบเพื่อสแกน
                 </p>
             </div>
         </div>
 
-        <!-- Bottom Controls -->
-        <div class="p-6 bg-slate-900/90 border-t border-slate-800 shrink-0 flex items-center justify-center gap-6 z-10">
-            <!-- Camera Flip Button -->
-            <button onclick="toggleCameraFacing()" class="flex flex-col items-center justify-center space-y-1 text-slate-300 hover:text-white transition-all cursor-pointer">
-                <div class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700 active:scale-95 shadow-md">
-                    <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+        <div class="absolute top-safe left-0 right-0 p-6 flex justify-between items-start z-20 pointer-events-none">
+            <div
+                class="flex items-center space-x-2 bg-black/30 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 text-white">
+                <i data-lucide="scan-line" class="w-5 h-5 text-indigo-400"></i>
+                <span class="font-bold text-sm tracking-wide">สแกนอัตโนมัติ</span>
+            </div>
+            <button onclick="stopCameraOverlay()"
+                class="p-3 bg-black/30 backdrop-blur-md hover:bg-rose-500/80 border border-white/10 rounded-full transition-all cursor-pointer pointer-events-auto text-white active:scale-90">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <div class="absolute bottom-10 left-0 right-0 flex justify-center z-20 pointer-events-none pb-safe">
+            <button onclick="toggleCameraFacing()"
+                class="flex flex-col items-center justify-center space-y-2 text-white/80 hover:text-white transition-all cursor-pointer pointer-events-auto group active:scale-90">
+                <div
+                    class="w-16 h-16 bg-black/30 backdrop-blur-md group-hover:bg-black/50 rounded-full flex items-center justify-center border border-white/20 shadow-2xl">
+                    <i data-lucide="refresh-cw" class="w-7 h-7"></i>
                 </div>
-                <span class="text-[10px] font-bold text-slate-400">สลับกล้อง หน้า/หลัง</span>
+                <span class="text-[11px] font-bold tracking-wider drop-shadow-md">สลับกล้อง</span>
             </button>
         </div>
     </div>
