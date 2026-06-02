@@ -35,7 +35,7 @@ jobs:
 
       - name: Build site
         env:
-          VITE_GOOGLE_SHEET_API_URL: https://script.google.com/macros/s/AKfycbwwmI5EplsHIUqCM4JCVhnFDTVEPZkh0E06NQtLN21-7BKbZ0TjL1KZGqRUgUZd4uLbmQ/exec
+          VITE_GOOGLE_SHEET_PROXY_URL: https://income-outcome-api-proxy.veezalove2.workers.dev
         run: npm run build
 
       - name: Setup Pages
