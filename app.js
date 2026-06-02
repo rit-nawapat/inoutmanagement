@@ -71,7 +71,7 @@ import {
     updateRecurringSummary as updateRecurringSummaryService,
 } from './src/ledger-service.mjs';
 
-const GOOGLE_SHEET_API_URL = import.meta.env.VITE_GOOGLE_SHEET_API_URL;
+const GOOGLE_SHEET_API_URL = import.meta.env.VITE_GOOGLE_SHEET_PROXY_URL || import.meta.env.VITE_GOOGLE_SHEET_API_URL;
 const apiClient = createApiClient(GOOGLE_SHEET_API_URL);
 
 // -------------------------------------------------------------

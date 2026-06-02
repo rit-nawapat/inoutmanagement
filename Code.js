@@ -10,6 +10,15 @@ function textResponse(message) {
     .setMimeType(ContentService.MimeType.TEXT);
 }
 
+function asString_(value) {
+  return value === undefined || value === null ? '' : String(value);
+}
+
+function asNumber_(value) {
+  var num = Number(value);
+  return Number.isNaN(num) ? 0 : num;
+}
+
 function normalizeText_(value, fallback) {
   return value === undefined || value === null ? fallback : value;
 }
@@ -41,6 +50,92 @@ function upsertRowById_(sheet, id, width, rowValues, action) {
     }
   }
   return false;
+}
+
+function readRows_(sheetName) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return [];
+
+  var values = sheet.getDataRange().getValues();
+  if (!values || values.length <= 1) return [];
+
+  var headers = values[0];
+  var rows = [];
+  for (var i = 1; i < values.length; i++) {
+    var row = {};
+    for (var j = 0; j < headers.length; j++) {
+      row[headers[j]] = values[i][j];
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function readProfiles_() {
+  return readRows_('Profiles').map(function (row) {
+    return {
+      id: asString_(row.ProfileID || row.ProfileId || row.id),
+      name: asString_(row.Name || row.name),
+      imageUrl: asString_(row.ImageURL || row.ImageUrl || row.imageUrl)
+    };
+  }).filter(function (row) { return row.id; });
+}
+
+function readHistory_(sheetName) {
+  return readRows_(sheetName).map(function (row) {
+    var id = row.ID !== undefined ? row.ID : row.id;
+    return {
+      id: asNumber_(id) || asString_(id),
+      type: asString_(row.Type || row.type),
+      categoryName: asString_(row.CategoryName || row.categoryName),
+      accountName: asString_(row.AccountName || row.accountName),
+      amount: asNumber_(row.Amount || row.amount),
+      barcodeNote: asString_(row.BarcodeNote || row.barcodeNote),
+      date: asString_(row.Date || row.date),
+      isoDate: asString_(row.IsoDate || row.isoDate)
+    };
+  }).filter(function (row) { return row.id !== ''; });
+}
+
+function readRecurring_(sheetName) {
+  return readRows_(sheetName).map(function (row) {
+    var id = row.ID !== undefined ? row.ID : row.id;
+    var categoryId = asString_(row.CategoryId || row.categoryId || row.Category || row.category);
+    var accountId = asString_(row.AccountId || row.accountId || row.Account || row.account);
+    return {
+      id: asNumber_(id) || asString_(id),
+      name: asString_(row.Name || row.name),
+      desc: asString_(row.Date_Desc || row.desc || row.Desc),
+      amount: asNumber_(row.Amount || row.amount),
+      categoryId: categoryId,
+      accountId: accountId,
+      category: categoryId,
+      account: accountId,
+      lastPaidMonth: asString_(row.LastPaidMonth || row.lastPaidMonth)
+    };
+  }).filter(function (row) { return row.id !== ''; });
+}
+
+function doGet(e) {
+  try {
+    var params = (e && e.parameter) || {};
+    if (params.user) {
+      var profileId = params.user.toString();
+      return jsonResponse({
+        status: 'Success',
+        history: readHistory_(profileId + '_History'),
+        recurring: readRecurring_(profileId + '_Recurring')
+      });
+    }
+
+    return jsonResponse({
+      status: 'Success',
+      profiles: readProfiles_()
+    });
+  } catch (error) {
+    return textResponse('Error: ' + error.message);
+  }
 }
 
 function doPost(e) {

@@ -34,13 +34,15 @@ export async function syncDataFromSheetFlow({
 
   if (data && data.recurring) {
     const mappedRecurring = data.recurring.map((item) => {
-      const catObj = categories.spent.find((c) => c.name === item.category);
-      const accObj = accounts.find((a) => a.name === item.account);
+      const categoryRef = item.categoryId || item.category;
+      const accountRef = item.accountId || item.account;
+      const catObj = categories.spent.find((c) => c.id === categoryRef || c.name === categoryRef);
+      const accObj = accounts.find((a) => a.id === accountRef || a.name === accountRef);
       const colorMap = { utensils: 'bg-orange-100 text-orange-600', coffee: 'bg-amber-100 text-amber-600', 'shopping-cart': 'bg-emerald-100 text-emerald-600', car: 'bg-blue-100 text-blue-600', clapperboard: 'bg-purple-100 text-purple-600', receipt: 'bg-rose-100 text-rose-600', palmtree: 'bg-teal-100 text-teal-600', 'help-circle': 'bg-slate-100 text-slate-600' };
       return {
         ...item,
-        categoryId: catObj ? catObj.id : 'other_exp',
-        accountId: accObj ? accObj.id : 'cash',
+        categoryId: catObj ? catObj.id : (categoryRef || 'other_exp'),
+        accountId: accObj ? accObj.id : (accountRef || 'cash'),
         icon: catObj ? catObj.icon : 'help-circle',
         color: catObj ? (colorMap[catObj.icon] || 'bg-slate-100 text-slate-600') : 'bg-slate-100 text-slate-600',
         fav: false,

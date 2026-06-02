@@ -1,0 +1,6 @@
+name = "income-outcome-api-proxy"
+main = "src/index.js"
+compatibility_date = "2026-06-02"
+
+[vars]
+# Set APPS_SCRIPT_URL as a secret or environment variable when deploying.
