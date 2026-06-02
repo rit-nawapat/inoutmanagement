@@ -1,16 +1,226 @@
+import { createApiClient } from './src/api-client.mjs';
+import {
+    loadCurrentProfileId,
+    loadSavedProfiles,
+    getHistoryStorageKey,
+    getRecurringStorageKey,
+    loadRecurringItems,
+    saveCurrentProfileId,
+    saveSavedProfiles,
+    saveRecurringItems,
+} from './src/core.mjs';
+import { createEl, setText } from './src/dom-helpers.mjs';
+import { createIcon } from './src/render-helpers.mjs';
+import {
+    accounts,
+    categories,
+    formatCurrencyInput,
+    guessAccountForCategory,
+    renderAccounts as renderAccountsService,
+    renderCategories as renderCategoriesService,
+} from './src/catalog-service.mjs';
+import { setButtonLoading, setDialogConfirmLoading } from './src/button-helpers.mjs';
+import { applyConfirmDialogPreset } from './src/confirm-dialog.mjs';
+import {
+    backspaceCalculator,
+    calculateCalculator,
+    clearCalculator,
+    inputDigitCalculator,
+    inputOperatorCalculator,
+    quickPriceCalculator,
+    resetCalculatorScanState,
+} from './src/calculator-service.mjs';
+import { analyzeSlipText } from './src/ocr-service.mjs';
+import {
+    buildEditDraft,
+} from './src/transaction-service.mjs';
+import {
+    closeProfileModal as closeProfileModalService,
+    closeProfileSelection as closeProfileSelectionService,
+    deleteCurrentEditingProfile as deleteCurrentEditingProfileService,
+    executeDeleteProfile as executeDeleteProfileService,
+    handleProfileImageSelect as handleProfileImageSelectService,
+    openProfileModal as openProfileModalService,
+    renderProfileGrid as renderProfileGridService,
+    saveProfileData as saveProfileDataService,
+    showProfileSelection as showProfileSelectionService,
+    updateActiveProfileUI as updateActiveProfileUIService,
+} from './src/profile-service.mjs';
+import {
+    executeDeleteFlow,
+    saveTransactionFlow,
+    selectProfileFlow,
+    syncDataFromSheetFlow,
+} from './src/flow-service.mjs';
+import {
+    closeRecurringModal as closeRecurringModalService,
+    deleteRecurringItem as deleteRecurringItemService,
+    executeDeleteRecurring as executeDeleteRecurringService,
+    openRecurringModal as openRecurringModalService,
+    payRecurringItem as payRecurringItemService,
+    saveRecurringItem as saveRecurringItemService,
+    toggleFavRecurring as toggleFavRecurringService,
+} from './src/recurring-service.mjs';
+import { appState } from './src/app-state.mjs';
+import { uiState } from './src/ui-state.mjs';
+import {
+    getRecurringItems as getRecurringItemsService,
+    renderHistory as renderHistoryService,
+    renderRecurringList as renderRecurringListService,
+    updateDashboard as updateDashboardService,
+    updateRecurringSummary as updateRecurringSummaryService,
+} from './src/ledger-service.mjs';
+
 const GOOGLE_SHEET_API_URL = import.meta.env.VITE_GOOGLE_SHEET_API_URL;
+const apiClient = createApiClient(GOOGLE_SHEET_API_URL);
 
-let currentPage = 'add';
-let currentType = 'spent';
-let expression = '0';
-let isEvaluated = false;
-let html5QrCode = null;
-let currentFacingMode = "environment";
-let currentSlipRefNo = "";
-let currentScannedBarcode = "";
-let editModeId = null;
+// -------------------------------------------------------------
+// ระบบ Profile (Netflix Style)
+// -------------------------------------------------------------
+let currentUserProfileId = loadCurrentProfileId(localStorage);
+let allProfiles = loadSavedProfiles(localStorage);
 
-let txHistory = JSON.parse(localStorage.getItem('my_tx_history') || '[]');
+const selectedImageState = { base64: null, mimeType: null, fileName: null };
+
+function getHistoryKey() { return getHistoryStorageKey(currentUserProfileId); }
+function getRecurringKey() { return getRecurringStorageKey(currentUserProfileId); }
+function getRecurringItems() { return getRecurringItemsService(localStorage, currentUserProfileId); }
+function updateDashboard() { updateDashboardService(appState.txHistory); }
+function updateRecurringSummary() { updateRecurringSummaryService(appState.txHistory, localStorage, currentUserProfileId); }
+function renderRecurringList() {
+    renderRecurringListService({
+        storage: localStorage,
+        profileId: currentUserProfileId,
+        onPay: payRecurringItem,
+        onToggleFav: toggleFavRecurring,
+        onEdit: openRecurringModal,
+        onDelete: deleteRecurringItem,
+    });
+}
+function renderHistory() {
+    renderHistoryService({
+        txHistory: appState.txHistory,
+        onEdit: editTransaction,
+        onDelete: deleteTransaction,
+    });
+}
+
+// เรียกเมื่อเริ่มแอป
+async function initProfileSystem() {
+    renderProfileGrid();
+
+    // ถ้ายังไม่มีโปรไฟล์ที่เลือก ให้แสดงหน้าเลือกโปรไฟล์
+    if (!currentUserProfileId) {
+        showProfileSelection();
+    } else {
+        document.getElementById('page-profile-selection').classList.add('hidden');
+        updateActiveProfileUI();
+    }
+
+    // โหลดข้อมูลโปรไฟล์จากคลาวด์เบื้องหลัง
+    try {
+        const data = await apiClient.getJson();
+        if (data && data.profiles) {
+            allProfiles = data.profiles;
+            saveSavedProfiles(localStorage, allProfiles);
+            renderProfileGrid();
+            updateActiveProfileUI();
+        }
+    } catch (e) { console.error("Profile sync error"); }
+}
+
+function showProfileSelection() {
+    showProfileSelectionService({
+        currentUserProfileId,
+        allProfiles,
+        renderProfileGrid,
+    });
+}
+
+function closeProfileSelection() {
+    closeProfileSelectionService({});
+}
+
+function renderProfileGrid() {
+    renderProfileGridService({
+        container: document.getElementById('profile-grid-container'),
+        allProfiles,
+        currentUserProfileId,
+        onSelectProfile: selectProfile,
+        onOpenProfileModal: openProfileModal,
+    });
+}
+
+function selectProfile(id) {
+    currentUserProfileId = id;
+    saveCurrentProfileId(localStorage, currentUserProfileId);
+    document.getElementById('page-profile-selection').classList.add('hidden');
+    updateActiveProfileUI();
+    appState.txHistory = JSON.parse(localStorage.getItem(getHistoryKey()) || '[]');
+    updateDashboard();
+    if (appState.currentPage === 'history') renderHistory();
+    if (appState.currentPage === 'list') { renderRecurringList(); updateRecurringSummary(); }
+    showToast(`เข้าสู่ระบบ: ${allProfiles.find(p => p.id === id)?.name}`, 'success');
+    syncDataFromSheet();
+}
+
+function updateActiveProfileUI() {
+    updateActiveProfileUIService({ currentUserProfileId, allProfiles });
+}
+
+function openProfileModal(id) {
+    openProfileModalService({
+        id,
+        allProfiles,
+        selectedImageState,
+    });
+}
+
+function deleteCurrentEditingProfile() {
+    deleteCurrentEditingProfileService({
+        closeProfileModalFn: closeProfileModal,
+        triggerResetConfirm,
+    });
+}
+
+async function executeDeleteProfile(id) {
+    allProfiles = await executeDeleteProfileService({
+        id,
+        allProfiles,
+        currentUserProfileId,
+        setCurrentUserProfileId: (value) => { currentUserProfileId = value; },
+        saveSavedProfiles,
+        saveCurrentProfileId,
+        appState,
+        updateDashboardFn: updateDashboard,
+        renderProfileGridFn: renderProfileGrid,
+        showProfileSelectionFn: showProfileSelection,
+        showToast,
+        apiClient,
+    });
+}
+
+function closeProfileModal() { closeProfileModalService({}); }
+
+function handleProfileImageSelect(event) {
+    handleProfileImageSelectService({ event, selectedImageState });
+}
+
+async function saveProfileData() {
+    await saveProfileDataService({
+        allProfiles,
+        currentUserProfileId,
+        selectedImageState,
+        apiClient,
+        saveSavedProfiles,
+        updateActiveProfileUIFn: updateActiveProfileUI,
+        renderProfileGridFn: renderProfileGrid,
+        closeProfileModalFn: closeProfileModal,
+        showToast,
+    });
+}
+
+appState.txHistory = JSON.parse(localStorage.getItem(getHistoryKey()) || localStorage.getItem('my_tx_history') || '[]');
 
 const thaiMonths = {
     'ม.ค.': 0, 'ก.พ.': 1, 'มี.ค.': 2, 'เม.ย.': 3, 'พ.ค.': 4, 'มิ.ย.': 5,
@@ -19,113 +229,13 @@ const thaiMonths = {
     'กรกฎาคม': 6, 'สิงหาคม': 7, 'กันยายน': 8, 'ตุลาคม': 9, 'พฤศจิกายน': 10, 'ธันวาคม': 11
 };
 
-const categories = {
-    spent: [
-        { id: 'food', name: 'อาหาร', icon: 'utensils' }, { id: 'beverage', name: 'เครื่องดื่ม', icon: 'coffee' },
-        { id: 'grocery', name: 'ของใช้', icon: 'shopping-cart' }, { id: 'transport', name: 'เดินทาง', icon: 'car' },
-        { id: 'entertainment', name: 'บันเทิง', icon: 'clapperboard' }, { id: 'bills', name: 'บิล/ค่าไฟ', icon: 'receipt' },
-        { id: 'travel', name: 'เที่ยว', icon: 'palmtree' }, { id: 'other_exp', name: 'อื่นๆ', icon: 'help-circle' }
-    ],
-    income: [
-        { id: 'salary', name: 'เงินเดือน', icon: 'briefcase' }, { id: 'bonus', name: 'โบนัส', icon: 'gift' },
-        { id: 'investment', name: 'ลงทุน', icon: 'trending-up' }, { id: 'other_inc', name: 'อื่นๆ', icon: 'sparkles' }
-    ]
-};
-const accounts = [
-    { id: 'cash', name: 'เงินสด', icon: 'banknote' }, { id: 'credit', name: 'บัตรเครดิต', icon: 'credit-card' },
-    { id: 'spaylater', name: 'SPayLater', icon: 'zap' }, { id: 'qrscan', name: 'สแกนจ่าย', icon: 'scan' }, { id: 'promptpay', name: 'พร้อมเพย์', icon: 'smartphone' }
-];
-
-let selectedCategory = categories.spent[0].id;
-let selectedAccount = accounts[0].id;
+uiState.selectedCategory = categories.spent[0].id;
+uiState.selectedAccount = accounts[0].id;
 
 function setLocalDatetime() {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('tx-date').value = now.toISOString().slice(0, 16);
-}
-
-function formatCurrencyInput(input) {
-    let value = input.value.replace(/,/g, '');
-    let number = parseFloat(value);
-    if (isNaN(number)) { input.value = ''; return; }
-    let parts = value.split('.');
-    parts[0] = parseInt(parts[0] || 0).toLocaleString('en-US');
-    input.value = parts.join('.');
-}
-
-function parseDateTimeFromOCR(ocrText) {
-    const cleanText = ocrText.replace(/\s+/g, ' ');
-    const thaiDateRegex = /(\d{1,2})\s*([ก-ฮ\.]+)\s*(\d{2,4})\s*(?:-|เวลา)?\s*(\d{2}:\d{2})/;
-    const thaiDateMatch = cleanText.match(thaiDateRegex);
-    if (thaiDateMatch) {
-        const day = parseInt(thaiDateMatch[1]);
-        const monthStr = thaiDateMatch[2];
-        let year = parseInt(thaiDateMatch[3]);
-        const time = thaiDateMatch[4];
-
-        if (year < 100) year += 2000;
-        if (year > 2500) year -= 543;
-
-        const monthIndex = thaiMonths[monthStr] !== undefined ? thaiMonths[monthStr] : 0;
-        const [hours, minutes] = time.split(':');
-        const d = new Date(year, monthIndex, day, parseInt(hours), parseInt(minutes));
-        if (!isNaN(d.getTime())) {
-            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-            return d.toISOString().slice(0, 16);
-        }
-    }
-
-    const engDateRegex = /(\d{2})[\/\.-](\d{2})[\/\.-](\d{4}|\d{2})\s+(\d{2}:\d{2})/;
-    const engDateMatch = cleanText.match(engDateRegex);
-    if (engDateMatch) {
-        const day = parseInt(engDateMatch[1]);
-        const month = parseInt(engDateMatch[2]) - 1;
-        let year = parseInt(engDateMatch[3]);
-        const time = engDateMatch[4];
-        if (year < 100) year += 2000;
-        const [hours, minutes] = time.split(':');
-        const d = new Date(year, month, day, parseInt(hours), parseInt(minutes));
-        if (!isNaN(d.getTime())) {
-            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-            return d.toISOString().slice(0, 16);
-        }
-    }
-    return null;
-}
-
-function parseRefNoFromOCR(ocrText) {
-    const cleanText = ocrText.replace(/\s+/g, ' ');
-    const refRegex = /(?:เลขที่อ้างอิง|รหัสอ้างอิง|เลขที่รายการ|ref(?:\.?\s*no)?|trans(?:\.?\s*id)?|transaction\s*id)[\s\S]{0,15}?([A-Za-z0-9\-]{8,25})/i;
-    const refMatch = cleanText.match(refRegex);
-    if (refMatch) {
-        return refMatch[1].trim();
-    }
-    return null;
-}
-
-function checkDuplicateSlip(refNo) {
-    if (!refNo) return false;
-    return txHistory.find(tx => tx.slipRefNo === refNo);
-}
-
-function guessCategoryFromText(ocrText) {
-    const text = ocrText.toLowerCase();
-    const mappings = [
-        { categoryId: 'bills', keywords: ['ไฟ', 'น้ำ', 'เน็ต', 'อินเทอร์เน็ต', 'โทรศัพท์', 'มือถือ', 'ส่วนกลาง', 'บ้าน', 'คอนโด', 'บัตร', 'ประกัน', 'งวด', 'เช่า', 'bill', 'electric', 'water', 'internet', 'wifi', 'phone', 'condo', 'card', 'insurance'] },
-        { categoryId: 'transport', keywords: ['รถ', 'น้ำมัน', 'ทางด่วน', 'บีทีเอส', 'bts', 'mrt', 'แท็กซี่', 'taxi', 'car', 'gas', 'fuel', 'toll', 'ปตท', 'ptt', 'shell', 'bangchak', 'บางจาก', 'เชลล์'] },
-        { categoryId: 'food', keywords: ['อาหาร', 'ข้าว', 'กิน', 'ชาบู', 'หมูกระทะ', 'บุฟเฟต์', 'food', 'shabu', 'buffet', 'lunch', 'dinner', 'kfc', 'mcdonald', 'ร้านอาหาร', 'ก๋วยเตี๋ยว', 'คาเฟ่', 'coffee', 'starbucks', 'ส้มตำ', 'ชาไข่มุก'] },
-        { categoryId: 'beverage', keywords: ['กาแฟ', 'ชา', 'นม', 'น้ำดื่ม', 'เบียร์', 'เหล้า', 'coffee', 'tea', 'drink', 'beverage', 'beer'] },
-        { categoryId: 'grocery', keywords: ['ของใช้', 'สบู่', 'ยาสีฟัน', 'แชมพู', 'ซื้อของ', 'ห้าง', 'โลตัส', 'เซเว่น', 'grocery', 'shopping', 'supermarket', '7-eleven', '7-11', 'lotus', 'bigc', 'big c', 'makro', 'tops', 'cj'] },
-        { categoryId: 'entertainment', keywords: ['บันเทิง', 'หนัง', 'เน็ตฟลิกส์', 'netflix', 'youtube', 'disney', 'spotify', 'เกม', 'game', 'movie', 'sf', 'major'] },
-        { categoryId: 'travel', keywords: ['เที่ยว', 'ตั๋ว', 'บิน', 'เครื่องบิน', 'โรงแรม', 'travel', 'hotel', 'flight', 'trip'] }
-    ];
-
-    for (const mapping of mappings) {
-        const matched = mapping.keywords.some(keyword => text.includes(keyword));
-        if (matched) return mapping.categoryId;
-    }
-    return null;
 }
 
 function processSlipOCR(fileInput) {
@@ -134,38 +244,26 @@ function processSlipOCR(fileInput) {
     showToast('กำลังแกะข้อมูลจากสลิป...', 'success');
 
     Tesseract.recognize(file, 'tha+eng').then(({ data: { text } }) => {
-        let detectedAmount = 0;
-        const moneyRegex = /(?:จำนวนเงิน|ยอดโอน|บาท|amt|amount)[\s\S]{0,15}?([0-9,]+\.[0-9]{2})/i;
-        let match = text.replace(/ /g, '').match(moneyRegex);
-        if (match && match[1]) {
-            detectedAmount = parseFloat(match[1].replace(/,/g, ''));
-        } else {
-            const genericAmountRegex = /\b([0-9,]+\.[0-9]{2})\b/g;
-            let allAmounts = []; let m;
-            while ((m = genericAmountRegex.exec(text.replace(/ /g, ''))) !== null) {
-                let val = parseFloat(m[1].replace(/,/g, ''));
-                if (!isNaN(val) && val > 0) allAmounts.push(val);
-            }
-            if (allAmounts.length > 0) {
-                detectedAmount = Math.max(...allAmounts);
-            }
-        }
+        const {
+            detectedAmount,
+            parsedDate,
+            refNo,
+            guessedCategoryId,
+            duplicateTx,
+        } = analyzeSlipText(text, appState.txHistory);
 
         if (detectedAmount > 0) {
             playScanSuccessSound();
-            expression = detectedAmount.toString();
-            display.innerText = expression;
+            uiState.expression = detectedAmount.toString();
+            display.innerText = uiState.expression;
 
-            const parsedDate = parseDateTimeFromOCR(text);
             if (parsedDate) {
                 document.getElementById('tx-date').value = parsedDate;
                 showToast('ปรับปรุงวันที่และเวลาตามสลิป', 'success');
             }
 
-            const refNo = parseRefNoFromOCR(text);
-            currentSlipRefNo = refNo || "";
+            uiState.currentSlipRefNo = refNo || "";
             if (refNo) {
-                const duplicateTx = checkDuplicateSlip(refNo);
                 if (duplicateTx) {
                     showToast(`⚠️ สลิปซ้ำ! เคยบันทึกแล้วเมื่อ ${duplicateTx.date} ยอด ฿${duplicateTx.amount}`, 'error');
                 } else {
@@ -173,19 +271,16 @@ function processSlipOCR(fileInput) {
                 }
             }
 
-            const guessedCatId = guessCategoryFromText(text);
-            if (guessedCatId) {
-                selectedCategory = guessedCatId;
+            if (guessedCategoryId) {
+                uiState.selectedCategory = guessedCategoryId;
                 renderCategories();
             }
 
-            selectedAccount = 'qrscan';
+            uiState.selectedAccount = 'qrscan';
             renderAccounts();
 
-            currentScannedBarcode = refNo ? `สลิปโอนเงิน (Ref: ${refNo})` : "สลิปโอนเงิน (OCR)";
-            document.getElementById('scanned-note').innerHTML = `<i data-lucide="file-text" class="w-3 h-3 inline-block"></i> ฿${detectedAmount} ${refNo ? `[${refNo.slice(-6)}]` : ''}`;
-            document.getElementById('scanned-note').classList.remove('hidden');
-            lucide.createIcons();
+            uiState.currentScannedBarcode = refNo ? `สลิปโอนเงิน (Ref: ${refNo})` : "สลิปโอนเงิน (OCR)";
+            showScannedNote('file-text', `฿${detectedAmount} ${refNo ? `[${refNo.slice(-6)}]` : ''}`.trim());
 
             showToast(`สแกนสลิปสำเร็จ ยอด ฿${detectedAmount}`, 'success');
         } else {
@@ -210,12 +305,12 @@ document.getElementById('main-touch-zone').addEventListener('touchend', (e) => {
     if (e.target.closest('#category-grid') || e.target.closest('#account-grid') || e.target.closest('#qr-reader') || e.target.closest('input') || e.target.closest('button')) return;
     touchEndX = e.changedTouches[0].screenX;
     let distance = touchEndX - touchStartX;
-    if (distance > 75 && pageOrder.indexOf(currentPage) > 0) { stopQRScanner(); switchPage(pageOrder[pageOrder.indexOf(currentPage) - 1]); }
-    else if (distance < -75 && pageOrder.indexOf(currentPage) < pageOrder.length - 1) { stopQRScanner(); switchPage(pageOrder[pageOrder.indexOf(currentPage) + 1]); }
+    if (distance > 75 && pageOrder.indexOf(appState.currentPage) > 0) { switchPage(pageOrder[pageOrder.indexOf(appState.currentPage) - 1]); }
+    else if (distance < -75 && pageOrder.indexOf(appState.currentPage) < pageOrder.length - 1) { switchPage(pageOrder[pageOrder.indexOf(appState.currentPage) + 1]); }
 }, { passive: true });
 
 function switchPage(pageId) {
-    currentPage = pageId;
+    appState.currentPage = pageId;
     pageOrder.forEach(p => { const target = document.getElementById(`page-${p}`); if (target) { target.classList.add('hidden'); target.classList.remove('flex'); } });
     const currentView = document.getElementById(`page-${pageId}`);
     if (currentView) { currentView.classList.remove('hidden'); currentView.classList.add('flex'); }
@@ -235,118 +330,98 @@ function switchPage(pageId) {
 }
 
 function setType(type) {
-    currentType = type;
+    appState.currentType = type;
     document.getElementById('tab-spent').className = type === 'spent' ? "flex-1 py-1 text-[10px] font-bold rounded-full bg-white text-slate-800 shadow-sm" : "flex-1 py-1 text-[10px] font-bold rounded-full text-slate-400";
     document.getElementById('tab-income').className = type === 'income' ? "flex-1 py-1 text-[10px] font-bold rounded-full bg-white text-slate-800 shadow-sm" : "flex-1 py-1 text-[10px] font-bold rounded-full text-slate-400";
-    selectedCategory = categories[type][0].id; renderCategories();
-}
-
-function guessAccountForCategory(categoryId) {
-    const categoryObj = (categories.spent.find(c => c.id === categoryId) || categories.income.find(c => c.id === categoryId));
-    if (!categoryObj) return null;
-
-    const matchingTx = txHistory.filter(tx => tx.categoryName === categoryObj.name && tx.type === 'spent');
-
-    if (matchingTx.length > 0) {
-        const counts = {};
-        matchingTx.forEach(tx => {
-            const acc = accounts.find(a => a.name === tx.accountName);
-            if (acc) {
-                counts[acc.id] = (counts[acc.id] || 0) + 1;
-            }
-        });
-
-        let bestAccountId = null;
-        let maxCount = 0;
-        for (const accId in counts) {
-            if (counts[accId] > maxCount) {
-                maxCount = counts[accId];
-                bestAccountId = accId;
-            }
-        }
-        if (bestAccountId) return bestAccountId;
-    }
-
-    if (categoryId === 'food' || categoryId === 'beverage') {
-        return 'qrscan';
-    } else if (categoryId === 'bills') {
-        return 'promptpay';
-    } else if (categoryId === 'grocery' || categoryId === 'travel' || categoryId === 'entertainment') {
-        return 'credit';
-    }
-    return null;
+    uiState.selectedCategory = categories[type][0].id; renderCategories();
 }
 
 function renderCategories() {
-    const grid = document.getElementById('category-grid'); grid.innerHTML = '';
-    categories[currentType].forEach(cat => {
-        const isSelected = cat.id === selectedCategory; const item = document.createElement('div');
-        item.className = "flex-shrink-0 flex flex-col items-center cursor-pointer snap-start min-w-[50px]";
-        item.onclick = () => {
-            selectedCategory = cat.id;
+    renderCategoriesService({
+        currentType: appState.currentType,
+        selectedCategory: uiState.selectedCategory,
+        selectedAccount: uiState.selectedAccount,
+        txHistory: appState.txHistory,
+        onSelectCategory: (categoryId) => {
+            uiState.selectedCategory = categoryId;
             renderCategories();
-            if (currentType === 'spent') {
-                const guessedAccId = guessAccountForCategory(cat.id);
-                if (guessedAccId && guessedAccId !== selectedAccount) {
-                    selectedAccount = guessedAccId;
-                    renderAccounts();
-                    showToast(`เดาช่องทางจ่าย: ${accounts.find(a => a.id === guessedAccId).name}`, 'success');
-                }
-            }
-        };
-        item.innerHTML = `<div class="w-10 h-10 flex items-center justify-center rounded-xl border ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-500'}"><i data-lucide="${cat.icon}" class="w-4 h-4"></i></div><span class="text-[9px] font-bold mt-1 ${isSelected ? 'text-indigo-600' : 'text-slate-500'}">${cat.name}</span>`;
-        grid.appendChild(item);
-    }); lucide.createIcons();
+        },
+        onSelectAccount: (accountId) => {
+            uiState.selectedAccount = accountId;
+            renderAccounts();
+        },
+        onGuessAccount: (categoryId, txHistory) => guessAccountForCategory(categoryId, txHistory),
+        onAccountGuessed: (accountId) => {
+            const accountName = accounts.find((a) => a.id === accountId)?.name;
+            if (accountName) showToast(`เดาช่องทางจ่าย: ${accountName}`, 'success');
+        },
+    });
 }
 
 function renderAccounts() {
-    const grid = document.getElementById('account-grid'); grid.innerHTML = '';
-    accounts.forEach(acc => {
-        const isSelected = acc.id === selectedAccount; const item = document.createElement('div');
-        item.className = "flex-shrink-0 snap-start"; item.onclick = () => { selectedAccount = acc.id; renderAccounts(); };
-        item.innerHTML = `<div class="flex items-center space-x-1 py-1.5 px-3 rounded-lg text-[9px] font-bold border ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500'}"><i data-lucide="${acc.icon}" class="w-3 h-3"></i><span>${acc.name}</span></div>`;
-        grid.appendChild(item);
-    }); lucide.createIcons();
+    renderAccountsService({
+        selectedAccount: uiState.selectedAccount,
+        onSelectAccount: (accountId) => {
+            uiState.selectedAccount = accountId;
+            renderAccounts();
+        },
+    });
 }
 
 const display = document.getElementById('display');
 
+function showScannedNote(iconName, message) {
+    const noteEl = document.getElementById('scanned-note');
+    if (!noteEl) return;
+
+    noteEl.replaceChildren();
+    noteEl.appendChild(createIcon(iconName, 'w-3 h-3 inline-block'));
+    noteEl.appendChild(document.createTextNode(` ${message}`));
+    noteEl.classList.remove('hidden');
+    lucide.createIcons();
+}
+
 function pressClearAll() {
-    expression = '0';
-    isEvaluated = false;
-    display.innerText = expression;
+    clearCalculator(uiState);
+    display.innerText = uiState.expression;
 
     // เคลียร์ข้อมูลสแกนเมื่อกด C
-    currentScannedBarcode = "";
-    currentSlipRefNo = "";
+    resetCalculatorScanState(uiState);
     const noteEl = document.getElementById('scanned-note');
     if (noteEl) {
         noteEl.classList.add('hidden');
-        noteEl.innerHTML = "";
+        noteEl.replaceChildren();
     }
 }
 
-function pressQuickPrice(value) { calculate(); let c = parseFloat(expression); if (isNaN(c) || isEvaluated) { c = 0; isEvaluated = false; } expression = (c + value).toString(); display.innerText = expression; }
-function pressKey(key) { if (expression === '0' || isEvaluated) { expression = key === '.' ? '0.' : key; isEvaluated = false; } else { const s = expression.split(/[\+\-\*\/]/); if (key === '.' && s[s.length - 1].includes('.')) return; expression += key; } display.innerText = expression; }
-function pressOp(op) { const l = expression.trim().slice(-1); if (['+', '-', '*', '/'].includes(l)) { expression = expression.slice(0, -1) + op; } else { expression += op; } isEvaluated = false; display.innerText = expression; }
+function pressQuickPrice(value) { quickPriceCalculator(uiState, value); display.innerText = uiState.expression; }
+function pressKey(key) { inputDigitCalculator(uiState, key); display.innerText = uiState.expression; }
+function pressOp(op) { inputOperatorCalculator(uiState, op); display.innerText = uiState.expression; }
 
 function pressClear() {
-    expression = expression.length > 1 ? expression.slice(0, -1) : '0';
-    display.innerText = expression;
+    backspaceCalculator(uiState);
+    display.innerText = uiState.expression;
 
     // ถ้ากดปุ่ม ⌫ ลบจนเหลือ 0 ให้เคลียร์ข้อมูลสแกนทิ้งด้วย
-    if (expression === '0') {
-        currentScannedBarcode = "";
-        currentSlipRefNo = "";
+    if (uiState.expression === '0') {
+        resetCalculatorScanState(uiState);
         const noteEl = document.getElementById('scanned-note');
         if (noteEl) {
             noteEl.classList.add('hidden');
-            noteEl.innerHTML = "";
+            noteEl.replaceChildren();
         }
     }
 }
 
-function calculate() { try { if (!expression) return; expression = Number(new Function(`return ${expression}`)().toFixed(2)).toString(); display.innerText = expression; isEvaluated = true; } catch (e) { display.innerText = '0'; expression = '0'; } }
+function calculate() {
+    try {
+        calculateCalculator(uiState);
+        display.innerText = uiState.expression;
+    } catch (e) {
+        display.innerText = '0';
+        uiState.expression = '0';
+    }
+}
 
 function playScanSuccessSound() {
     try {
@@ -367,202 +442,6 @@ function playScanSuccessSound() {
     } catch (e) {
         console.error("Failed to play scan sound:", e);
     }
-}
-
-function startCameraOverlay() {
-    const overlay = document.getElementById('camera-overlay');
-    overlay.classList.remove('hidden');
-
-    if (html5QrCode) {
-        html5QrCode.stop().catch(() => { }).finally(() => {
-            html5QrCode = null;
-            initCamera();
-        });
-    } else {
-        initCamera();
-    }
-}
-
-function initCamera() {
-    html5QrCode = new Html5Qrcode("camera-preview");
-    const config = {
-        fps: 15,
-        qrbox: (width, height) => {
-            const minSize = Math.min(width, height);
-            const boxSize = Math.min(minSize * 0.7, 280);
-            return { width: boxSize, height: boxSize };
-        },
-        aspectRatio: window.innerHeight / window.innerWidth,
-        videoConstraints: {
-            facingMode: currentFacingMode,
-            focusMode: "continuous",
-            advanced: [
-                { focusMode: "continuous" },
-                { autofocus: true }
-            ]
-        }
-    };
-
-    html5QrCode.start(
-        { facingMode: currentFacingMode },
-        config,
-        (decodedText) => {
-            playScanSuccessSound();
-            handleScannedResult(decodedText);
-            stopCameraOverlay();
-        },
-        (errorMessage) => { }
-    ).catch(err => {
-        showToast("ไม่สามารถเปิดกล้องได้: " + err, "error");
-        stopCameraOverlay();
-    });
-}
-
-function stopCameraOverlay() {
-    const overlay = document.getElementById('camera-overlay');
-    overlay.classList.add('hidden');
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-            html5QrCode = null;
-        }).catch(err => {
-            html5QrCode = null;
-        });
-    }
-}
-
-function toggleCameraFacing() {
-    currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
-    showToast("สลับกล้องเป็น: " + (currentFacingMode === "environment" ? "กล้องหลัง" : "กล้องหน้า"), "success");
-    if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => { initCamera(); }).catch(() => { initCamera(); });
-    }
-}
-
-function handleScannedResult(decodedText) {
-    // 1. ดักจับสแกน PromptPay
-    if (decodedText.startsWith("000201")) {
-        const amountMatch = decodedText.match(/54\d{2}(\d+\.\d{2})/);
-        if (amountMatch && amountMatch[1]) {
-            let slipAmount = parseFloat(amountMatch[1]);
-            expression = slipAmount.toString();
-            display.innerText = expression;
-            currentScannedBarcode = "สลิปพร้อมเพย์ (QR)";
-            document.getElementById('scanned-note').innerHTML = `<i data-lucide="qr-code" class="w-3 h-3 inline-block"></i> ฿${slipAmount}`;
-            document.getElementById('scanned-note').classList.remove('hidden');
-            lucide.createIcons();
-
-            selectedAccount = 'qrscan';
-            renderAccounts();
-
-            showToast(`พบยอด ฿${slipAmount} และเลือกช่องสแกนจ่ายออโต้`, 'success');
-            return;
-        }
-    }
-
-    // 2. คลังข้อมูลส่วนตัว (ใส่บาร์โค้ดของที่ใช้ประจำ)
-    const myFrequentItems = {
-        "8850250012345": "กาแฟ Birdy Green Zero",
-        "8851111111111": "Honda Giorno+ ค่าซ่อมบำรุง",
-    };
-
-    if (myFrequentItems[decodedText]) {
-        currentScannedBarcode = myFrequentItems[decodedText];
-        document.getElementById('scanned-note').innerHTML = `<i data-lucide="package" class="w-3 h-3 inline-block"></i> ${currentScannedBarcode}`;
-        document.getElementById('scanned-note').classList.remove('hidden');
-        lucide.createIcons();
-        showToast(`พบสินค้า: ${currentScannedBarcode}`, 'success');
-        return;
-    }
-
-    // 3. ถ้าไม่เจอ ค่อยวิ่งไปถาม API ภายนอก
-    showToast("กำลังค้นหาข้อมูลสินค้า...", "success");
-    fetch(`https://world.openfoodfacts.org/api/v2/product/${decodedText}.json`).then(res => res.json()).then(data => {
-        let pName = (data.status === 1 && data.product) ? (data.product.product_name_th || data.product.product_name) : null;
-        currentScannedBarcode = pName || `รหัส: ${decodedText}`;
-        document.getElementById('scanned-note').innerHTML = `<i data-lucide="package" class="w-3 h-3 inline-block"></i> ${currentScannedBarcode}`;
-        document.getElementById('scanned-note').classList.remove('hidden');
-        lucide.createIcons();
-        showToast(`พบสินค้า: ${pName || decodedText}`, 'success');
-    }).catch(() => {
-        currentScannedBarcode = `รหัส: ${decodedText}`;
-        document.getElementById('scanned-note').innerHTML = `<i data-lucide="search" class="w-3 h-3 inline-block"></i> ${decodedText}`;
-        document.getElementById('scanned-note').classList.remove('hidden');
-        lucide.createIcons();
-        showToast(`พบรหัส: ${decodedText}`, 'success');
-    });
-}
-
-// ----------------------------------------------------------------------
-// ⭐️ ระบบ "รายการประจำ" ตรวจสอบสถานะเดือนต่อเดือน ⭐️
-// ----------------------------------------------------------------------
-
-function getRecurringItems() { return JSON.parse(localStorage.getItem('my_recurring_list') || '[]'); }
-
-function updateRecurringSummary() {
-    const recurring = getRecurringItems();
-    const currentMonth = new Date().getMonth(); const currentYear = new Date().getFullYear();
-    let thisMonthIncome = 0;
-
-    txHistory.forEach(tx => {
-        if (tx.type === 'income' && tx.isoDate) {
-            let txDate = new Date(tx.isoDate);
-            if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) thisMonthIncome += tx.amount;
-        }
-    });
-
-    let totalRecurring = recurring.reduce((sum, item) => sum + item.amount, 0);
-    let remain = thisMonthIncome - totalRecurring;
-
-    document.getElementById('req-dash-income').innerText = `฿${thisMonthIncome.toLocaleString()}`;
-    document.getElementById('req-dash-spent').innerText = `฿${totalRecurring.toLocaleString()}`;
-    document.getElementById('req-dash-remain').innerText = `฿${remain.toLocaleString()}`;
-}
-
-function renderRecurringList() {
-    const container = document.getElementById('recurring-list-container'); container.innerHTML = '';
-    let items = getRecurringItems();
-
-    if (items.length === 0) {
-        container.innerHTML = `<div class="text-center py-8 text-slate-400"><i data-lucide="list-x" class="w-6 h-6 mx-auto mb-1 opacity-50"></i><p class="text-[10px]">ยังไม่มีรายการประจำ</p></div>`; lucide.createIcons(); return;
-    }
-
-    const currentMonthStr = new Date().toISOString().slice(0, 7);
-
-    items.forEach(item => {
-        const isPaidThisMonth = item.lastPaidMonth === currentMonthStr;
-        const statusBadge = isPaidThisMonth
-            ? `<span class="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded text-[9px] font-bold">จ่ายแล้ว</span>`
-            : `<span class="bg-amber-50 text-amber-600 px-2 py-0.5 rounded text-[9px] font-bold">ยังไม่จ่าย</span>`;
-
-        const payBtn = isPaidThisMonth
-            ? `<button disabled class="bg-slate-100 text-slate-400 px-2.5 py-1.5 rounded-lg text-[9px] font-bold shadow-none flex items-center gap-1 cursor-not-allowed mr-1"><i data-lucide="check-circle" class="w-3 h-3"></i> จ่ายแล้ว</button>`
-            : `<button onclick="payRecurringItem(${item.id})" class="bg-emerald-50 text-emerald-600 px-2.5 py-1.5 rounded-lg text-[9px] font-bold shadow-sm hover:bg-emerald-100 flex items-center gap-1 cursor-pointer mr-1"><i data-lucide="check-circle" class="w-3 h-3"></i> จ่าย</button>`;
-
-        const starColor = item.fav ? 'text-amber-400 fill-amber-400' : 'text-slate-300';
-        const block = document.createElement('div');
-        block.className = `flex flex-col md:grid md:grid-cols-12 md:items-center justify-between p-3 md:px-6 md:py-2 border-b border-slate-100 gap-2 ${isPaidThisMonth ? 'bg-slate-50 opacity-80' : 'bg-white'}`;
-
-        block.innerHTML = `
-            <div class="flex items-center space-x-2 md:col-span-3">
-                <div class="w-8 h-8 flex items-center justify-center rounded-full ${item.color} shrink-0"><i data-lucide="${item.icon}" class="w-4 h-4"></i></div>
-                <div><h4 class="font-bold text-slate-800 text-xs leading-tight">${item.name}</h4><p class="text-[9px] text-slate-400 mt-0.5">${item.desc}</p></div>
-            </div>
-            <div class="hidden md:block text-[10px] font-medium text-slate-500 col-span-2 text-center">${item.desc}</div>
-            <div class="flex items-center justify-between md:contents">
-                <div class="font-bold ${isPaidThisMonth ? 'text-slate-500' : 'text-rose-600'} text-xs md:col-span-2 md:text-right w-20 md:w-auto">${item.amount.toLocaleString()} ฿</div>
-                <div class="hidden md:flex justify-center col-span-2"><span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[9px] font-bold">${item.category}</span></div>
-                <div class="hidden md:flex justify-center col-span-1">${statusBadge}</div>
-                <div class="flex items-center space-x-1.5 md:col-span-2 md:justify-end">
-                    ${payBtn}
-                    <button onclick="toggleFavRecurring(${item.id})" class="cursor-pointer active:scale-90 transition-transform"><i data-lucide="star" class="w-3.5 h-3.5 ${starColor}"></i></button>
-                    <button onclick="openRecurringModal(${item.id})" class="text-slate-400 hover:text-indigo-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                    <button onclick="deleteRecurringItem(${item.id})" class="text-slate-400 hover:text-rose-500"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                </div>
-            </div>
-        `;
-        container.appendChild(block);
-    });
-    lucide.createIcons();
 }
 
 function autoSelectCategoryByName(name) {
@@ -590,108 +469,72 @@ function autoSelectCategoryByName(name) {
 }
 
 function openRecurringModal(id = null) {
-    document.getElementById('req-category').innerHTML = categories.spent.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    document.getElementById('req-account').innerHTML = accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-
-    if (id) {
-        document.getElementById('req-modal-title').innerText = "แก้ไขรายการประจำ";
-        const item = getRecurringItems().find(i => i.id === id);
-        document.getElementById('req-id').value = item.id;
-        document.getElementById('req-name').value = item.name;
-        document.getElementById('req-desc').value = item.desc;
-        document.getElementById('req-amount').value = item.amount.toLocaleString();
-        document.getElementById('req-category').value = item.categoryId;
-        document.getElementById('req-account').value = item.accountId || accounts[0].id;
-    } else {
-        document.getElementById('req-modal-title').innerText = "เพิ่มรายการประจำ";
-        document.getElementById('req-id').value = ""; document.getElementById('req-name').value = "";
-        document.getElementById('req-desc').value = "ทุกสิ้นเดือน"; document.getElementById('req-amount').value = "";
-    }
-    document.getElementById('recurring-modal').classList.remove('hidden');
+    openRecurringModalService({
+        id,
+        categories,
+        accounts,
+        getRecurringItems,
+    });
 }
-function closeRecurringModal() { document.getElementById('recurring-modal').classList.add('hidden'); }
+function closeRecurringModal() { closeRecurringModalService({}); }
 
-function saveRecurringItem() {
-    const id = document.getElementById('req-id').value;
-    const name = document.getElementById('req-name').value;
-    const desc = document.getElementById('req-desc').value;
-    const rawAmount = document.getElementById('req-amount').value.replace(/,/g, '');
-    const amount = parseFloat(rawAmount);
-    const categoryId = document.getElementById('req-category').value;
-    const accountId = document.getElementById('req-account').value;
-
-    if (!name || isNaN(amount) || amount <= 0) { showToast('ข้อมูลไม่ครบถ้วน', 'error'); return; }
-
-    const matchedCat = categories.spent.find(c => c.id === categoryId);
-    const matchedAcc = accounts.find(a => a.id === accountId);
-    const colorMap = { 'utensils': 'bg-orange-100 text-orange-600', 'coffee': 'bg-amber-100 text-amber-600', 'shopping-cart': 'bg-emerald-100 text-emerald-600', 'car': 'bg-blue-100 text-blue-600', 'clapperboard': 'bg-purple-100 text-purple-600', 'receipt': 'bg-rose-100 text-rose-600', 'palmtree': 'bg-teal-100 text-teal-600', 'help-circle': 'bg-slate-100 text-slate-600' };
-
-    let items = getRecurringItems();
-    let lastPaidMonth = "";
-    if (id) { lastPaidMonth = items.find(i => i.id == id).lastPaidMonth || ""; }
-
-    const newItem = {
-        id: id ? parseInt(id) : Date.now(), name, desc, amount, categoryId, accountId,
-        icon: matchedCat.icon, category: matchedCat.name, account: matchedAcc.name,
-        color: colorMap[matchedCat.icon] || 'bg-slate-100 text-slate-600',
-        fav: id ? items.find(i => i.id == id).fav : false,
-        lastPaidMonth: lastPaidMonth
-    };
-
-    if (id) { const index = items.findIndex(i => i.id == id); items[index] = newItem; } else { items.unshift(newItem); }
-    localStorage.setItem('my_recurring_list', JSON.stringify(items));
-    closeRecurringModal(); renderRecurringList(); updateRecurringSummary(); showToast('บันทึกรายการสำเร็จ', 'success');
-
-    fetch(GOOGLE_SHEET_API_URL, {
-        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ sheetName: 'Recurring', action: id ? 'edit' : 'add', ...newItem })
+async function saveRecurringItem() {
+    await saveRecurringItemService({
+        categories,
+        accounts,
+        currentUserProfileId,
+        getRecurringItems,
+        saveRecurringItems,
+        closeRecurringModalFn: closeRecurringModal,
+        renderRecurringListFn: renderRecurringList,
+        updateRecurringSummaryFn: updateRecurringSummary,
+        apiClient,
+        showToast,
+        setButtonLoading,
     });
 }
 
-function deleteRecurringItem(id) { triggerResetConfirm('delete_recurring', id); }
-function executeDeleteRecurring(id) {
-    let items = getRecurringItems(); items = items.filter(i => i.id !== id);
-    localStorage.setItem('my_recurring_list', JSON.stringify(items));
-    renderRecurringList(); updateRecurringSummary(); showToast('ลบแล้ว', 'success');
-    fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ sheetName: 'Recurring', action: 'delete', id: id }) });
+function deleteRecurringItem(id) { deleteRecurringItemService({ id, triggerResetConfirm }); }
+
+async function executeDeleteRecurring(id) {
+    await executeDeleteRecurringService({
+        id,
+        currentUserProfileId,
+        getRecurringItems,
+        saveRecurringItems,
+        renderRecurringListFn: renderRecurringList,
+        updateRecurringSummaryFn: updateRecurringSummary,
+        showToast,
+        apiClient,
+    });
 }
-function toggleFavRecurring(id) { let items = getRecurringItems(); const item = items.find(i => i.id === id); if (item) { item.fav = !item.fav; localStorage.setItem('my_recurring_list', JSON.stringify(items)); renderRecurringList(); } }
 
-function payRecurringItem(id) {
-    let items = getRecurringItems();
-    const item = items.find(i => i.id === id);
-    if (!item) return;
+function toggleFavRecurring(id) {
+    toggleFavRecurringService({
+        id,
+        currentUserProfileId,
+        getRecurringItems,
+        saveRecurringItems,
+        renderRecurringListFn: renderRecurringList,
+    });
+}
 
-    const currentMonthStr = new Date().toISOString().slice(0, 7);
-    if (item.lastPaidMonth === currentMonthStr) { showToast('จ่ายไปแล้วเดือนนี้', 'error'); return; }
-
-    item.lastPaidMonth = currentMonthStr;
-    const index = items.findIndex(i => i.id === id);
-    items[index] = item;
-    localStorage.setItem('my_recurring_list', JSON.stringify(items));
-
-    const matchedCat = categories.spent.find(c => c.id === item.categoryId) || categories.spent[0];
-    const matchedAcc = accounts.find(a => a.id === item.accountId) || accounts[0];
-
-    const transactionRecord = {
-        id: Date.now(), type: 'spent', categoryName: item.name, accountName: matchedAcc.name, amount: item.amount, barcodeNote: 'รายจ่ายประจำ: ' + item.desc,
-        date: new Date().toLocaleString('th-TH'), isoDate: new Date().toISOString().slice(0, 16), action: 'add', sheetName: 'Sheet1'
-    };
-
-    const uiRecord = {
-        ...transactionRecord,
-        categoryIcon: matchedCat.icon,
-        accountIcon: matchedAcc.icon
-    };
-
-    txHistory.unshift(uiRecord);
-    txHistory.sort((a, b) => b.id - a.id);
-    localStorage.setItem('my_tx_history', JSON.stringify(txHistory));
-    updateDashboard(); updateRecurringSummary(); renderRecurringList();
-    showToast(`จ่าย ${item.name} สำเร็จ`, 'success');
-
-    fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(transactionRecord) });
-    fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ sheetName: 'Recurring', action: 'edit', ...item }) });
+async function payRecurringItem(id) {
+    await payRecurringItemService({
+        id,
+        currentUserProfileId,
+        getRecurringItems,
+        saveRecurringItems,
+        updateDashboardFn: updateDashboard,
+        updateRecurringSummaryFn: updateRecurringSummary,
+        renderRecurringListFn: renderRecurringList,
+        showToast,
+        apiClient,
+        appState,
+        categories,
+        accounts,
+        getHistoryKey,
+    });
 }
 
 // ----------------------------------------------------------------------
@@ -699,181 +542,143 @@ function payRecurringItem(id) {
 // ----------------------------------------------------------------------
 
 async function syncDataFromSheet() {
-    // ดึงข้อมูลเงียบๆ อยู่เบื้องหลัง ไม่ต้อง showToast แจ้งเตือนตอนเริ่ม
     try {
-        const response = await fetch(GOOGLE_SHEET_API_URL);
-        const data = await response.json();
-
-        let isUpdated = false;
-
-        if (data && data.history) {
-            txHistory = data.history.map(item => {
-                const catObj = categories[item.type]?.find(c => c.name === item.categoryName);
-                const accObj = accounts.find(a => a.name === item.accountName);
-                return {
-                    ...item,
-                    categoryIcon: catObj ? catObj.icon : 'help-circle',
-                    accountIcon: accObj ? accObj.icon : 'banknote'
-                };
-            });
-            txHistory.sort((a, b) => b.id - a.id);
-            // อัปเดต Cache ในเครื่องให้สดใหม่เท่ากับบนคลาวด์
-            localStorage.setItem('my_tx_history', JSON.stringify(txHistory));
-            isUpdated = true;
-        }
-
-        if (data && data.recurring) {
-            const mappedRecurring = data.recurring.map(item => {
-                const catObj = categories.spent.find(c => c.name === item.category);
-                const accObj = accounts.find(a => a.name === item.account);
-                const colorMap = { 'utensils': 'bg-orange-100 text-orange-600', 'coffee': 'bg-amber-100 text-amber-600', 'shopping-cart': 'bg-emerald-100 text-emerald-600', 'car': 'bg-blue-100 text-blue-600', 'clapperboard': 'bg-purple-100 text-purple-600', 'receipt': 'bg-rose-100 text-rose-600', 'palmtree': 'bg-teal-100 text-teal-600', 'help-circle': 'bg-slate-100 text-slate-600' };
-                return {
-                    ...item,
-                    categoryId: catObj ? catObj.id : 'other_exp',
-                    accountId: accObj ? accObj.id : 'cash',
-                    icon: catObj ? catObj.icon : 'help-circle',
-                    color: catObj ? (colorMap[catObj.icon] || 'bg-slate-100 text-slate-600') : 'bg-slate-100 text-slate-600',
-                    fav: false
-                };
-            });
-            localStorage.setItem('my_recurring_list', JSON.stringify(mappedRecurring));
-            isUpdated = true;
-        }
-
-        // ถ้ายิง API สำเร็จและมีข้อมูลใหม่ ให้รีเฟรชหน้าจอเบาๆ
-        if (isUpdated) {
-            updateDashboard();
-            if (currentPage === 'history') renderHistory();
-            if (currentPage === 'list') { renderRecurringList(); updateRecurringSummary(); }
-        }
+        await syncDataFromSheetFlow({
+            apiClient,
+            currentUserProfileId,
+            categories,
+            accounts,
+            saveRecurringItems,
+            getHistoryKey,
+            updateDashboardFn: updateDashboard,
+            renderHistoryFn: renderHistory,
+            renderRecurringListFn: renderRecurringList,
+            updateRecurringSummaryFn: updateRecurringSummary,
+            appState,
+        });
     } catch (error) {
         console.error("Sync Error (ใช้งานโหมด Offline):", error);
-        // ไม่ต้องแจ้งเตือน error ปล่อยให้ผู้ใช้ดูข้อมูลเก่าจาก LocalStorage ต่อไป
     }
 }
 
-function updateDashboard() {
-    let i = 0, s = 0;
-    txHistory.forEach(e => { if (e.type === 'income') i += e.amount; if (e.type === 'spent') s += e.amount; });
-    document.getElementById('dash-income').innerText = `฿${i.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    document.getElementById('dash-spent').innerText = `฿${s.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    document.getElementById('dash-balance').innerText = `฿${(i - s).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-}
-
-function saveTransaction() {
-    calculate(); const finalVal = parseFloat(expression); if (isNaN(finalVal) || finalVal <= 0) { showToast('กรุณากรอกยอด', 'error'); return; }
-    const matchedCat = categories[currentType].find(c => c.id === selectedCategory); const matchedAcc = accounts.find(a => a.id === selectedAccount);
-    const inputDate = new Date(document.getElementById('tx-date').value);
-
-    const transactionRecord = {
-        id: editModeId || Date.now(), type: currentType, categoryName: matchedCat ? matchedCat.name : 'อื่นๆ', accountName: matchedAcc ? matchedAcc.name : 'เงินสด',
-        amount: finalVal, barcodeNote: currentScannedBarcode, slipRefNo: currentSlipRefNo, date: inputDate.toLocaleString('th-TH'), isoDate: document.getElementById('tx-date').value,
-        action: editModeId ? 'edit' : 'add', sheetName: 'Sheet1'
-    };
-
-    const uiRecord = {
-        ...transactionRecord,
-        categoryIcon: matchedCat ? matchedCat.icon : 'help-circle',
-        accountIcon: matchedAcc ? matchedAcc.icon : 'banknote'
-    };
-
-    if (editModeId) {
-        const index = txHistory.findIndex(t => t.id === editModeId);
-        if (index > -1) txHistory[index] = uiRecord;
+async function saveTransaction() {
+    const btn = document.getElementById('btn-save');
+    const loadingState = setButtonLoading(btn, { label: 'กำลังบันทึก...', iconClass: 'w-4 h-4' });
+    try {
+        await saveTransactionFlow({
+            uiState,
+            appState,
+            currentUserProfileId,
+            categories,
+            accounts,
+            getHistoryKey,
+            updateDashboardFn: updateDashboard,
+            renderHistoryFn: renderHistory,
+            showToast,
+            apiClient,
+            document,
+            display,
+            setLocalDatetime,
+        });
+    } finally {
+        loadingState?.restore();
     }
-    else {
-        txHistory.unshift(uiRecord);
-    }
-
-    // [ส่วนที่เพิ่มใหม่] บันทึกลง Cache ในมือถือ
-    localStorage.setItem('my_tx_history', JSON.stringify(txHistory));
-
-    expression = '0'; currentScannedBarcode = ""; currentSlipRefNo = ""; display.innerText = expression; document.getElementById('scanned-note').classList.add('hidden'); editModeId = null; setLocalDatetime();
-    updateDashboard(); if (currentPage === 'history') renderHistory(); showToast('บันทึกสำเร็จ', 'success');
-
-    // ส่งไปเซฟบน Google Sheets เป็น Background
-    fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(transactionRecord) });
 }
 
 function editTransaction(id) {
-    const tx = txHistory.find(t => t.id === id); if (!tx) return;
-    editModeId = id; setType(tx.type); selectedCategory = categories[tx.type].find(c => c.name === tx.categoryName)?.id || categories[tx.type][0].id;
-    selectedAccount = accounts.find(a => a.name === tx.accountName)?.id || accounts[0].id; expression = tx.amount.toString(); display.innerText = expression;
-    currentSlipRefNo = tx.slipRefNo || "";
-    document.getElementById('tx-date').value = tx.isoDate || new Date().toISOString().slice(0, 16); renderCategories(); renderAccounts(); switchPage('add');
+    const tx = appState.txHistory.find(t => t.id === id); if (!tx) return;
+    const draft = buildEditDraft({
+        tx,
+        currentType: tx.type,
+        categories,
+        accounts,
+    });
+    uiState.editModeId = draft.editModeId;
+    setType(tx.type);
+    uiState.selectedCategory = draft.selectedCategory;
+    uiState.selectedAccount = draft.selectedAccount;
+    uiState.expression = draft.expression;
+    display.innerText = uiState.expression;
+    uiState.currentSlipRefNo = tx.slipRefNo || "";
+    document.getElementById('tx-date').value = draft.isoDate;
+    renderCategories(); renderAccounts(); switchPage('add');
 }
 
 function deleteTransaction(id) { triggerResetConfirm('delete_item', id); }
 
-function executeDelete(id) {
-    txHistory = txHistory.filter(t => t.id !== id);
-    localStorage.setItem('my_tx_history', JSON.stringify(txHistory));
-    updateDashboard(); renderHistory();
-    fetch(GOOGLE_SHEET_API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'delete', id: id, sheetName: 'Sheet1' }) });
-}
-
-function renderHistory() {
-    const listSection = document.getElementById('history-list');
-    document.getElementById('history-count').innerText = `${txHistory.length} รายการ`;
-    listSection.innerHTML = '';
-
-    if (txHistory.length === 0) {
-        listSection.innerHTML = `<div class="text-center py-10 text-slate-400"><i data-lucide="folder-open" class="w-6 h-6 mx-auto mb-1"></i><span class="text-[10px]">ยังไม่พบประวัติ</span></div>`;
-        lucide.createIcons();
-        return;
-    }
-    txHistory.forEach(data => {
-        const block = document.createElement('div'); block.className = "flex justify-between items-center p-3 bg-white rounded-xl border border-slate-200";
-        block.innerHTML = `
-            <div class="flex items-center space-x-2">
-                <div class="w-8 h-8 flex items-center justify-center rounded-lg ${data.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}"><i data-lucide="${data.categoryIcon}" class="w-4 h-4"></i></div>
-                <div class="overflow-hidden">
-                    <div class="flex items-center space-x-1 flex-wrap"><span class="font-bold text-slate-800 text-xs">${data.categoryName}</span><span class="bg-slate-100 text-slate-500 px-1 py-0.5 rounded text-[8px] font-bold">${data.accountName || 'เงินสด'}</span></div>
-                    ${data.barcodeNote ? `<span class="text-[9px] text-indigo-500 block mt-0.5 truncate">${data.barcodeNote}</span>` : ''}
-                    <span class="text-[8px] text-slate-400 block">${data.date}</span>
-                </div>
-            </div>
-            <div class="flex flex-col items-end space-y-1.5 shrink-0">
-                <span class="font-bold text-sm ${data.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}">${data.type === 'income' ? '+' : '-'}฿${data.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                <div class="flex space-x-1">
-                    <button onclick="editTransaction(${data.id})" class="p-1 bg-slate-100 text-slate-500 rounded"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
-                    <button onclick="deleteTransaction(${data.id})" class="p-1 bg-slate-100 text-rose-500 rounded"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
-                </div>
-            </div>
-        `;
-        listSection.appendChild(block);
+async function executeDelete(id) {
+    await executeDeleteFlow({
+        id,
+        appState,
+        currentUserProfileId,
+        getHistoryKey,
+        updateDashboardFn: updateDashboard,
+        renderHistoryFn: renderHistory,
+        showToast,
+        apiClient,
     });
-    lucide.createIcons();
 }
 
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container'); const toast = document.createElement('div');
     toast.className = `${type === 'success' ? 'bg-slate-900 text-white' : 'bg-rose-600 text-white'} w-full flex items-center space-x-2 px-3 py-2 rounded-lg shadow-xl text-[10px] font-bold pointer-events-auto`;
-    toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="w-3 h-3"></i> <span class="truncate">${message}</span>`;
+    toast.appendChild(createIcon(type === 'success' ? 'check-circle' : 'alert-circle', 'w-3 h-3'));
+    const text = createEl('span', { className: 'truncate' });
+    setText(text, message);
+    toast.appendChild(text);
     container.appendChild(toast); lucide.createIcons(); setTimeout(() => { toast.remove(); }, 1500);
 }
 
 let onConfirmCallback = null;
 function triggerResetConfirm(type = 'all', id = null) {
     document.getElementById('custom-confirm-dialog').classList.remove('hidden');
-    onConfirmCallback = (isConfirmed) => {
+    applyConfirmDialogPreset({
+        title: document.getElementById('confirm-title'),
+        desc: document.getElementById('confirm-desc'),
+        btn: document.getElementById('confirm-btn-action'),
+        iconWrapper: document.getElementById('confirm-icon-wrapper'),
+        iconBg: document.getElementById('confirm-icon-bg'),
+    }, type);
+
+    // ผูก Callback เป็น Async
+    onConfirmCallback = async (isConfirmed) => {
         if (isConfirmed) {
-            if (type === 'all') { txHistory = []; expression = '0'; display.innerText = expression; updateDashboard(); if (currentPage === 'history') renderHistory(); showToast('ล้างข้อมูล', 'success'); }
-            else if (type === 'delete_item') { executeDelete(id); }
-            else if (type === 'delete_recurring') { executeDeleteRecurring(id); }
+            if (type === 'all') { appState.txHistory = []; uiState.expression = '0'; display.innerText = uiState.expression; localStorage.setItem(getHistoryKey(), JSON.stringify(appState.txHistory)); updateDashboard(); if (appState.currentPage === 'history') renderHistory(); showToast('ล้างข้อมูลสำเร็จ', 'success'); }
+            else if (type === 'delete_item') { await executeDelete(id); }
+            else if (type === 'delete_recurring') { await executeDeleteRecurring(id); }
+            else if (type === 'switch_profile') { showProfileSelection(); }
+            else if (type === 'delete_profile') { await executeDeleteProfile(id); }
         }
     };
 }
-function closeConfirmDialog(result) { document.getElementById('custom-confirm-dialog').classList.add('hidden'); if (onConfirmCallback) { onConfirmCallback(result); onConfirmCallback = null; } }
 
-document.addEventListener('DOMContentLoaded', () => {
+async function closeConfirmDialog(result) {
+    const dialog = document.getElementById('custom-confirm-dialog');
+    if (result && onConfirmCallback) {
+        const btn = document.getElementById('confirm-btn-action');
+        const loadingState = setDialogConfirmLoading(btn);
+
+        await onConfirmCallback(result); // รอให้ลบเสร็จ
+
+        loadingState?.restore();
+    } else if (!result && onConfirmCallback) {
+        onConfirmCallback(result);
+    }
+    dialog.classList.add('hidden');
+    onConfirmCallback = null;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
     setLocalDatetime();
     renderCategories();
     renderAccounts();
     updateDashboard();
     switchPage('add');
-    syncDataFromSheet();
+    await initProfileSystem();
+    if (currentUserProfileId) {
+        await syncDataFromSheet();
+    }
 });
 
 // Expose functions globally for HTML inline event handlers
@@ -881,9 +686,6 @@ window.switchPage = switchPage;
 window.triggerResetConfirm = triggerResetConfirm;
 window.setType = setType;
 window.processSlipOCR = processSlipOCR;
-window.startCameraOverlay = startCameraOverlay;
-window.stopCameraOverlay = stopCameraOverlay;
-window.toggleCameraFacing = toggleCameraFacing;
 window.openRecurringModal = openRecurringModal;
 window.closeRecurringModal = closeRecurringModal;
 window.saveRecurringItem = saveRecurringItem;
@@ -902,3 +704,13 @@ window.deleteTransaction = deleteTransaction;
 window.closeConfirmDialog = closeConfirmDialog;
 window.autoSelectCategoryByName = autoSelectCategoryByName;
 window.formatCurrencyInput = formatCurrencyInput;
+
+// อย่าลืม Expose ฟังก์ชันใหม่ใส่บรรทัดล่างสุดด้วย
+window.showProfileSelection = showProfileSelection;
+window.selectProfile = selectProfile;
+window.openProfileModal = openProfileModal;
+window.closeProfileModal = closeProfileModal;
+window.handleProfileImageSelect = handleProfileImageSelect;
+window.saveProfileData = saveProfileData;
+window.closeProfileSelection = closeProfileSelection;
+window.deleteCurrentEditingProfile = deleteCurrentEditingProfile;

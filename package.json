@@ -4,6 +4,7 @@
   "description": "ระบบบันทึกเงิน V8.2",
   "scripts": {
     "dev": "vite",
+    "test": "node --test --test-isolation=none",
     "build": "vite build",
     "preview": "vite preview"
   },
