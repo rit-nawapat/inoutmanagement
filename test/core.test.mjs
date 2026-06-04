@@ -104,17 +104,40 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /grid-cols-3/);
   assert.match(htmlSource, /overflow-x-auto no-scrollbar snap-x gap-2/);
   assert.match(htmlSource, /id="tx-date-compact-row"/);
+  assert.match(htmlSource, /id="mobile-app-shell"/);
+  assert.match(htmlSource, /id="mobile-app-header"/);
   assert.doesNotMatch(htmlSource, /id="tab-acc-money"/);
   assert.doesNotMatch(htmlSource, /ข้อมูลประกอบรายการ/);
   assert.doesNotMatch(htmlSource, /id="ocr-file-input"/);
   assert.doesNotMatch(htmlSource, /processSlipOCR\(this\)/);
   assert.match(appSource, /function\s+scrollMainContentToTop\s*\(/);
+  assert.match(appSource, /function\s+syncViewportMetrics\s*\(/);
+  assert.match(appSource, /--app-height/);
+  assert.match(appSource, /--content-height/);
+  assert.match(appSource, /visualViewport/);
+  assert.match(appSource, /classList\.toggle\('is-add-page', pageId === 'add'\)/);
   assert.match(appSource, /function\s+openAccountSelectorModal\s*\(/);
   assert.match(appSource, /function\s+openBudgetSelectorModal\s*\(/);
   assert.match(appSource, /function\s+updateCompactSelectionSummary\s*\(/);
   assert.match(appSource, /if\s*\(pageId === 'add'\)\s*scrollMainContentToTop\(\)/);
   assert.doesNotMatch(appSource, /window\.processSlipOCR\s*=/);
   assert.doesNotMatch(appSource, /function\s+toggleAddDetails\s*\(/);
+});
+
+test('mobile viewport CSS locks the add page to measured visual viewport height', () => {
+  const cssSource = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /--app-height:\s*100dvh/);
+  assert.match(cssSource, /--content-height:\s*calc\(var\(--app-height\) - 128px\)/);
+  assert.match(cssSource, /#mobile-app-shell/);
+  assert.match(cssSource, /height:\s*var\(--app-height\)/);
+  assert.match(cssSource, /#main-content-scroll/);
+  assert.match(cssSource, /height:\s*var\(--content-height\)/);
+  assert.match(cssSource, /body\.is-add-page #main-content-scroll/);
+  assert.match(cssSource, /body:not\(\.is-add-page\) #main-content-scroll/);
+  assert.match(cssSource, /#page-add/);
+  assert.match(cssSource, /height:\s*100%/);
+  assert.match(cssSource, /#page-add\s+#?[^{}]*\{/);
 });
 
 test('desktop add page uses a dedicated two-column layout', () => {

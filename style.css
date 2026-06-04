@@ -6,6 +6,18 @@
   font-family: "Inter", "Noto Sans Thai", sans-serif !important;
 }
 
+:root {
+  --app-height: 100dvh;
+  --mobile-header-height: 54px;
+  --mobile-nav-height: 74px;
+  --content-height: calc(var(--app-height) - 128px);
+}
+
+html,
+body {
+  overscroll-behavior: none;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -18,6 +30,111 @@
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (max-width: 767px) {
+  html,
+  body {
+    width: 100%;
+    height: var(--app-height);
+    overflow: hidden;
+  }
+
+  #mobile-app-shell {
+    height: var(--app-height);
+    min-height: var(--app-height);
+    overflow: hidden;
+  }
+
+  #main-touch-zone {
+    height: var(--app-height);
+    min-height: 0;
+    padding-bottom: 0 !important;
+    overflow: hidden;
+  }
+
+  #mobile-app-header {
+    height: var(--mobile-header-height);
+  }
+
+  #bottom-nav {
+    height: var(--mobile-nav-height);
+  }
+
+  #main-content-scroll {
+    height: var(--content-height);
+    max-height: var(--content-height);
+    min-height: 0;
+    padding: 0.375rem 0.5rem !important;
+  }
+
+  body.is-add-page #main-content-scroll {
+    overflow: hidden;
+  }
+
+  body:not(.is-add-page) #main-content-scroll {
+    overflow-y: auto;
+  }
+
+  #page-add {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    padding-bottom: 0 !important;
+  }
+
+  #page-add > div {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    gap: 0.375rem;
+  }
+
+  #tx-calculator-column {
+    flex: 1 1 55%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  #tx-calculator-column > div:first-child {
+    flex: 0 0 auto;
+  }
+
+  #tx-calculator-column > div:last-child {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  #tx-calculator-column > div:last-child > div {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  #tx-calculator-column .btn-key,
+  #tx-calculator-column .btn-op {
+    min-height: 0 !important;
+  }
+
+  #tx-options-card {
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: 45%;
+    padding: 0.5rem !important;
+    gap: 0.45rem;
+  }
+
+  #category-grid {
+    min-height: 56px;
+  }
+
+  #btn-save {
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
   }
 }
 

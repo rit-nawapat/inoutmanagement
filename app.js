@@ -538,6 +538,8 @@ if (mainTouchZone) {
 
 function switchPage(pageId) {
     appState.currentPage = pageId;
+    syncViewportMetrics();
+    document.body.classList.toggle('is-add-page', pageId === 'add');
     pageOrder.forEach(p => { const target = document.getElementById(`page-${p}`); if (target) { target.classList.add('hidden'); target.classList.remove('flex'); } });
     const currentView = document.getElementById(`page-${pageId}`);
     if (currentView) { currentView.classList.remove('hidden'); currentView.classList.add('flex'); }
@@ -579,6 +581,27 @@ function scrollMainContentToTop() {
     const mainContent = document.getElementById('main-content-scroll');
     mainContent?.scrollTo?.({ top: 0, behavior: 'auto' });
     if (typeof window !== 'undefined') window.scrollTo?.({ top: 0, behavior: 'auto' });
+}
+
+function syncViewportMetrics() {
+    const root = document.documentElement;
+    const viewportHeight = Math.round(window.visualViewport?.height || window.innerHeight || root.clientHeight);
+    const headerHeight = Math.ceil(document.getElementById('mobile-app-header')?.getBoundingClientRect().height || 54);
+    const navHeight = Math.ceil(document.getElementById('bottom-nav')?.getBoundingClientRect().height || 74);
+    const contentHeight = Math.max(320, viewportHeight - headerHeight - navHeight);
+
+    root.style.setProperty('--app-height', `${viewportHeight}px`);
+    root.style.setProperty('--mobile-header-height', `${headerHeight}px`);
+    root.style.setProperty('--mobile-nav-height', `${navHeight}px`);
+    root.style.setProperty('--content-height', `${contentHeight}px`);
+}
+
+function setupViewportMetricListeners() {
+    syncViewportMetrics();
+    window.addEventListener('resize', syncViewportMetrics);
+    window.addEventListener('orientationchange', () => setTimeout(syncViewportMetrics, 250));
+    window.visualViewport?.addEventListener?.('resize', syncViewportMetrics);
+    window.visualViewport?.addEventListener?.('scroll', syncViewportMetrics);
 }
 
 function setType(type) {
@@ -953,6 +976,7 @@ const display = document.getElementById('display');
 
 document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
+    setupViewportMetricListeners();
     setLocalDatetime();
     renderCategories();
     renderAccounts();
