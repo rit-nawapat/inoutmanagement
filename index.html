@@ -257,15 +257,15 @@
                     </div>
                 </section>
 
-                <section id="page-add" class="hidden flex-col w-full max-w-6xl mx-auto flex-1 min-h-0 pb-1 lg:pb-6">
-                    <div class="flex flex-col gap-2 lg:gap-6 flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(380px,440px)_minmax(0,1fr)] lg:items-start">
+                <section id="page-add" class="hidden flex-col w-full max-w-6xl mx-auto flex-1 min-h-0 overflow-hidden pb-1 lg:pb-6">
+                    <div class="flex flex-col gap-1.5 lg:gap-6 flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(380px,440px)_minmax(0,1fr)] lg:items-start">
                         <div class="space-y-2 lg:space-y-3 lg:sticky lg:top-0">
-                        <div class="bg-white rounded-2xl border border-slate-200 px-3.5 py-2.5 lg:px-5 lg:py-4">
+                        <div class="bg-white rounded-2xl border border-slate-200 px-3 py-2 lg:px-5 lg:py-4">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">ยอดที่ต้องการบันทึก</span>
                                     <div id="display"
-                                        class="text-3xl lg:text-5xl font-extrabold text-slate-800 tracking-tight truncate mt-0.5">
+                                        class="text-[30px] leading-none lg:text-5xl font-extrabold text-slate-800 tracking-tight truncate mt-0.5">
                                         0</div>
                                 </div>
                                 <div class="bg-slate-50 text-slate-300 rounded-xl p-1.5 shrink-0"><i data-lucide="calculator" class="w-4 h-4"></i></div>
@@ -275,12 +275,12 @@
                             </div>
                         </div>
 
-                        <div class="bg-white rounded-2xl border border-slate-200 p-2.5 lg:p-4 space-y-3 flex-1 min-h-0">
+                        <div class="bg-white rounded-2xl border border-slate-200 p-2 lg:p-4 space-y-2 flex-1 min-h-0">
                             <div class="space-y-2 pt-1 border-t-0 lg:pt-0 lg:border-t-0 flex-1 min-h-0">
                                 <div class="flex items-center justify-between">
                                     <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน</span>
                                 </div>
-                                <div class="grid grid-cols-3 gap-2">
+                                <div class="grid grid-cols-3 gap-1.5 lg:gap-2">
                                     <button onclick="pressClearAll()"
                                         class="btn-quick-price !bg-rose-50 !text-rose-600 !border-rose-200 py-1.5 lg:py-2 text-[11px]">ล้าง</button>
                                     <button onclick="pressQuickPrice(20)"
@@ -289,29 +289,29 @@
                                         class="btn-quick-price py-1.5 lg:py-2 text-[11px]">+100</button>
                                 </div>
 
-                                <div class="grid grid-cols-4 gap-2 lg:gap-3 text-base font-bold text-slate-800 flex-1 min-h-[224px] lg:min-h-[420px] auto-rows-fr">
-                                    <button onclick="pressKey('1')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">1</button>
-                                    <button onclick="pressKey('2')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">2</button>
-                                    <button onclick="pressKey('3')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">3</button>
-                                    <button onclick="pressOp('+')" class="btn-op min-h-[50px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="plus" class="w-4 h-4 mx-auto"></i></button>
-                                    <button onclick="pressKey('4')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">4</button>
-                                    <button onclick="pressKey('5')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">5</button>
-                                    <button onclick="pressKey('6')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">6</button>
-                                    <button onclick="pressOp('-')" class="btn-op min-h-[50px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="minus" class="w-4 h-4 mx-auto"></i></button>
-                                    <button onclick="pressKey('7')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">7</button>
-                                    <button onclick="pressKey('8')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">8</button>
-                                    <button onclick="pressKey('9')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">9</button>
-                                    <button onclick="pressOp('*')" class="btn-op min-h-[50px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="x" class="w-4 h-4 mx-auto"></i></button>
-                                    <button onclick="pressKey('.')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">.</button>
-                                    <button onclick="pressKey('0')" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full">0</button>
-                                    <button onclick="pressClear()" class="btn-key min-h-[50px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="delete" class="w-4 h-4 mx-auto"></i></button>
-                                    <button onclick="calculate()" class="btn-op min-h-[50px] lg:min-h-[72px] h-full lg:h-full bg-[#5b3df0] text-white border-indigo-600 active:bg-indigo-800">=</button>
+                                <div class="grid grid-cols-4 gap-1.5 lg:gap-3 text-base font-bold text-slate-800 flex-1 min-h-[196px] lg:min-h-[420px] auto-rows-fr">
+                                    <button onclick="pressKey('1')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">1</button>
+                                    <button onclick="pressKey('2')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">2</button>
+                                    <button onclick="pressKey('3')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">3</button>
+                                    <button onclick="pressOp('+')" class="btn-op min-h-[44px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="plus" class="w-4 h-4 mx-auto"></i></button>
+                                    <button onclick="pressKey('4')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">4</button>
+                                    <button onclick="pressKey('5')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">5</button>
+                                    <button onclick="pressKey('6')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">6</button>
+                                    <button onclick="pressOp('-')" class="btn-op min-h-[44px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="minus" class="w-4 h-4 mx-auto"></i></button>
+                                    <button onclick="pressKey('7')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">7</button>
+                                    <button onclick="pressKey('8')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">8</button>
+                                    <button onclick="pressKey('9')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">9</button>
+                                    <button onclick="pressOp('*')" class="btn-op min-h-[44px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="x" class="w-4 h-4 mx-auto"></i></button>
+                                    <button onclick="pressKey('.')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">.</button>
+                                    <button onclick="pressKey('0')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">0</button>
+                                    <button onclick="pressClear()" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="delete" class="w-4 h-4 mx-auto"></i></button>
+                                    <button onclick="calculate()" class="btn-op min-h-[44px] lg:min-h-[72px] h-full lg:h-full bg-[#5b3df0] text-white border-indigo-600 active:bg-indigo-800">=</button>
                                 </div>
                             </div>
                         </div>
                         </div>
 
-                        <div class="bg-white rounded-2xl border border-slate-200 p-2.5 lg:p-5 space-y-3 lg:space-y-5 flex-1 min-h-0">
+                        <div class="bg-white rounded-2xl border border-slate-200 p-2.5 lg:p-5 space-y-2.5 lg:space-y-5 flex-1 min-h-0 overflow-hidden">
                             <div class="flex items-center justify-between gap-3">
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ</span>
                                 <div class="bg-slate-100 p-0.5 rounded-full flex w-28 shrink-0">
@@ -332,21 +332,34 @@
                                 </label>
                             </div>
 
-                            <div class="space-y-2">
+                            <div class="space-y-1.5">
                                 <div class="flex items-center justify-between">
                                     <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">หมวดหมู่</span>
                                 </div>
                                 <div class="w-full flex overflow-x-auto no-scrollbar snap-x gap-2 lg:flex-wrap" id="category-grid"></div>
                             </div>
 
-                            <div class="space-y-1 pt-1 border-t border-slate-100">
+                            <div class="grid grid-cols-2 gap-2 md:hidden">
+                                <button id="tx-account-summary-row" type="button" onclick="openAccountSelectorModal()"
+                                    class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left">
+                                    <span class="block text-[9px] font-bold uppercase tracking-wider text-slate-400">ช่องทาง</span>
+                                    <span id="tx-account-summary-text" class="mt-0.5 block truncate text-[11px] font-bold text-slate-700">เลือกช่องทาง</span>
+                                </button>
+                                <button id="tx-budget-summary-row" type="button" onclick="openBudgetSelectorModal()"
+                                    class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left">
+                                    <span class="block text-[9px] font-bold uppercase tracking-wider text-slate-400">กระเป๋า</span>
+                                    <span id="tx-budget-summary-text" class="mt-0.5 block truncate text-[11px] font-bold text-slate-700">เลือกกระเป๋า</span>
+                                </button>
+                            </div>
+
+                            <div class="hidden md:block space-y-1 pt-1 border-t border-slate-100">
                                 <div class="flex items-center justify-between">
                                     <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400">ช่องทางชำระเงิน</span>
                                 </div>
                                 <div class="w-full flex overflow-x-auto no-scrollbar snap-x gap-2 lg:flex-wrap lg:gap-3" id="account-grid"></div>
                             </div>
 
-                            <div id="tx-budget-group-section" class="space-y-1 pt-1 border-t border-slate-100">
+                            <div id="tx-budget-group-section" class="hidden md:block space-y-1 pt-1 border-t border-slate-100">
                                 <div class="flex items-center justify-between">
                                     <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400">กระเป๋าที่ต้องการใช้</span>
                                 </div>
@@ -517,6 +530,38 @@
                 <button onclick="saveRecurringItem()"
                     class="w-full bg-[#0f172a] text-white py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors hover:bg-slate-800">บันทึกเข้าระบบ</button>
             </div>
+        </div>
+    </div>
+
+    <div id="account-selector-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden md:hidden">
+        <div class="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white px-4 pb-6 pt-4 shadow-2xl">
+            <div class="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-200"></div>
+            <div class="mb-3 flex items-center justify-between">
+                <div>
+                    <h4 class="text-sm font-bold text-slate-800">เลือกช่องทางชำระเงิน</h4>
+                    <p class="text-[10px] font-medium text-slate-400">แตะเพื่อเปลี่ยนค่าใช้งานของรายการนี้</p>
+                </div>
+                <button type="button" onclick="closeAccountSelectorModal()" class="rounded-full p-1 text-slate-400">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div id="account-grid-modal" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    <div id="budget-selector-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden md:hidden">
+        <div class="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white px-4 pb-6 pt-4 shadow-2xl">
+            <div class="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-200"></div>
+            <div class="mb-3 flex items-center justify-between">
+                <div>
+                    <h4 class="text-sm font-bold text-slate-800">เลือกกระเป๋า</h4>
+                    <p class="text-[10px] font-medium text-slate-400">ใช้เฉพาะรายการรายจ่าย</p>
+                </div>
+                <button type="button" onclick="closeBudgetSelectorModal()" class="rounded-full p-1 text-slate-400">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div id="tx-budget-group-grid-modal" class="flex flex-wrap gap-2"></div>
         </div>
     </div>
 

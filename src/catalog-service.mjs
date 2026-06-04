@@ -153,10 +153,11 @@ export function renderAccounts({
   accountTab = 'money',
   showAllAccounts = false,
   onSelectAccount,
+  containerId = 'account-grid',
   doc = globalThis.document,
   lucide = globalThis.lucide,
 } = {}) {
-  const grid = doc.getElementById('account-grid');
+  const grid = doc.getElementById(containerId);
   if (!grid) return;
 
   grid.replaceChildren();

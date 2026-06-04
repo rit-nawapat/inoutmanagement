@@ -15,6 +15,7 @@ import {
 } from './src/core.mjs';
 import { createEl, setText, nextFrame } from './src/dom-helpers.mjs';
 import { createIcon } from './src/render-helpers.mjs';
+import { hideModal, showModal } from './src/modal-helpers.mjs';
 import {
     accounts,
     categories,
@@ -205,7 +206,51 @@ function selectBudgetGroup(groupId) {
         doc: document,
         lucide: lucide
     });
+    renderBudgetSelector({
+        groups: allBudgetGroups,
+        txHistory: appState.txHistory,
+        selectedBudgetGroupId: uiState.selectedBudgetGroupId,
+        onSelect: selectBudgetGroup,
+        containerId: 'tx-budget-group-grid-modal',
+        doc: document,
+        lucide: lucide
+    });
+    updateCompactSelectionSummary();
+    closeBudgetSelectorModal();
     saveDraft();
+}
+
+function updateCompactSelectionSummary() {
+    const accountLabel = document.getElementById('tx-account-summary-text');
+    const budgetLabel = document.getElementById('tx-budget-summary-text');
+    const budgetButton = document.getElementById('tx-budget-summary-row');
+    const selectedAccount = accounts.find((acc) => acc.id === uiState.selectedAccount);
+    const calculatedGroups = calculateRemainingBalances(allBudgetGroups, appState.txHistory);
+    const selectedGroup = calculatedGroups.find((group) => group.id.toString() === uiState.selectedBudgetGroupId?.toString());
+
+    setText(accountLabel, selectedAccount?.name || 'เลือกช่องทาง');
+    setText(budgetLabel, selectedGroup?.name || 'ไม่ใช้กระเป๋า');
+
+    if (budgetButton) {
+        budgetButton.classList.toggle('hidden', appState.currentType !== 'spent');
+    }
+}
+
+function openAccountSelectorModal() {
+    showModal('account-selector-modal');
+}
+
+function closeAccountSelectorModal() {
+    hideModal('account-selector-modal');
+}
+
+function openBudgetSelectorModal() {
+    if (appState.currentType !== 'spent') return;
+    showModal('budget-selector-modal');
+}
+
+function closeBudgetSelectorModal() {
+    hideModal('budget-selector-modal');
 }
 
 function updateDashboard() {
@@ -224,6 +269,15 @@ function updateDashboard() {
         doc: document,
         lucide: lucide
     });
+    renderBudgetSelector({
+        groups: allBudgetGroups,
+        txHistory: appState.txHistory,
+        selectedBudgetGroupId: uiState.selectedBudgetGroupId,
+        onSelect: selectBudgetGroup,
+        containerId: 'tx-budget-group-grid-modal',
+        doc: document,
+        lucide: lucide
+    });
     renderUpcomingForecast({
         txHistory: appState.txHistory,
         storage: localStorage,
@@ -232,6 +286,7 @@ function updateDashboard() {
         doc: document,
         lucide: lucide
     });
+    updateCompactSelectionSummary();
 }
 
 function updateRecurringSummary() { updateRecurringSummaryService(appState.txHistory, localStorage, currentUserProfileId); }
@@ -486,6 +541,11 @@ function switchPage(pageId) {
     pageOrder.forEach(p => { const target = document.getElementById(`page-${p}`); if (target) { target.classList.add('hidden'); target.classList.remove('flex'); } });
     const currentView = document.getElementById(`page-${pageId}`);
     if (currentView) { currentView.classList.remove('hidden'); currentView.classList.add('flex'); }
+    const mainContent = document.getElementById('main-content-scroll');
+    if (mainContent) {
+        mainContent.classList.toggle('overflow-hidden', pageId === 'add');
+        mainContent.classList.toggle('overflow-visible', pageId !== 'add');
+    }
     if (pageId === 'add') scrollMainContentToTop();
 
     document.getElementById('mobile-title').innerText = { dashboard: 'หน้าแรก', list: 'ลิสต์ประจำ', add: 'บันทึกรายการ', history: 'ประวัติธุรกรรม', debt: 'จัดการหนี้สิน' }[pageId];
@@ -530,11 +590,13 @@ function setType(type) {
     if (budgetCard) {
         if (type === 'spent') {
             budgetCard.classList.remove('hidden');
+            budgetCard.classList.add('md:block');
         } else {
             budgetCard.classList.add('hidden');
         }
     }
 
+    updateCompactSelectionSummary();
     uiState.selectedCategory = categories[type][0].id; renderCategories();
     saveDraft();
 }
@@ -575,6 +637,21 @@ function renderAccounts() {
         doc: document,
         lucide: lucide
     });
+    renderAccountsService({
+        selectedAccount: uiState.selectedAccount,
+        accountTab: uiState.accountTab,
+        showAllAccounts: true,
+        containerId: 'account-grid-modal',
+        onSelectAccount: (id) => {
+            uiState.selectedAccount = id;
+            renderAccounts();
+            closeAccountSelectorModal();
+            saveDraft();
+        },
+        doc: document,
+        lucide: lucide
+    });
+    updateCompactSelectionSummary();
 }
 
 function setAccountTab(tab) {
@@ -958,6 +1035,10 @@ window.closeConfirmDialog = closeConfirmDialog;
 window.autoSelectCategoryByName = autoSelectCategoryByName;
 window.formatCurrencyInput = formatCurrencyInput;
 window.setAccountTab = setAccountTab;
+window.openAccountSelectorModal = openAccountSelectorModal;
+window.closeAccountSelectorModal = closeAccountSelectorModal;
+window.openBudgetSelectorModal = openBudgetSelectorModal;
+window.closeBudgetSelectorModal = closeBudgetSelectorModal;
 
 window.showProfileSelection = showProfileSelection;
 window.selectProfile = selectProfile;
