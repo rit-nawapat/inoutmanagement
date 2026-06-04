@@ -89,6 +89,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   const appSource = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
   const htmlSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
+  assert.match(htmlSource, /min-h-\[100dvh\] overflow-x-hidden md:h-\[100dvh\] md:overflow-hidden/);
   assert.match(htmlSource, /เลือกวันเวลา/);
   assert.match(htmlSource, /ช่องทางชำระเงิน/);
   assert.match(htmlSource, /กระเป๋าที่ต้องการใช้/);
@@ -101,6 +102,8 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.doesNotMatch(htmlSource, /ข้อมูลประกอบรายการ/);
   assert.doesNotMatch(htmlSource, /id="ocr-file-input"/);
   assert.doesNotMatch(htmlSource, /processSlipOCR\(this\)/);
+  assert.match(appSource, /function\s+scrollMainContentToTop\s*\(/);
+  assert.match(appSource, /if\s*\(pageId === 'add'\)\s*scrollMainContentToTop\(\)/);
   assert.doesNotMatch(appSource, /window\.processSlipOCR\s*=/);
   assert.doesNotMatch(appSource, /function\s+toggleAddDetails\s*\(/);
 });

@@ -486,6 +486,7 @@ function switchPage(pageId) {
     pageOrder.forEach(p => { const target = document.getElementById(`page-${p}`); if (target) { target.classList.add('hidden'); target.classList.remove('flex'); } });
     const currentView = document.getElementById(`page-${pageId}`);
     if (currentView) { currentView.classList.remove('hidden'); currentView.classList.add('flex'); }
+    if (pageId === 'add') scrollMainContentToTop();
 
     document.getElementById('mobile-title').innerText = { dashboard: 'หน้าแรก', list: 'ลิสต์ประจำ', add: 'บันทึกรายการ', history: 'ประวัติธุรกรรม', debt: 'จัดการหนี้สิน' }[pageId];
 
@@ -512,6 +513,12 @@ function switchPage(pageId) {
     if (pageId === 'dashboard') updateDashboard();
     if (pageId === 'list') { renderRecurringList(); updateRecurringSummary(); }
     if (pageId === 'debt') renderDebt();
+}
+
+function scrollMainContentToTop() {
+    const mainContent = document.getElementById('main-content-scroll');
+    mainContent?.scrollTo?.({ top: 0, behavior: 'auto' });
+    if (typeof window !== 'undefined') window.scrollTo?.({ top: 0, behavior: 'auto' });
 }
 
 function setType(type) {
