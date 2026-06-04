@@ -25,6 +25,8 @@ const PRESETS = {
   },
 };
 
+let pendingResolver = null;
+
 export function getConfirmDialogPreset(type = 'all') {
   const preset = PRESETS[type] || PRESETS.default;
   return {
@@ -51,4 +53,54 @@ export function applyConfirmDialogPreset(elements, type = 'all') {
   if (iconBg) iconBg.className = preset.iconBgClass;
 
   return preset;
+}
+
+function getConfirmDialogElements(doc = globalThis.document) {
+  return {
+    dialog: doc.getElementById('custom-confirm-dialog'),
+    title: doc.getElementById('confirm-title'),
+    desc: doc.getElementById('confirm-desc'),
+    btn: doc.getElementById('confirm-btn-action'),
+    iconWrapper: doc.getElementById('confirm-icon-wrapper'),
+    iconBg: doc.getElementById('confirm-icon-bg'),
+  };
+}
+
+export function showConfirmDialog({
+  type = 'all',
+  title,
+  desc,
+  btnText,
+  btnClass,
+  iconWrapperClass,
+  iconBgClass,
+  doc = globalThis.document,
+} = {}) {
+  const elements = getConfirmDialogElements(doc);
+  if (!elements.dialog) return Promise.resolve(false);
+
+  applyConfirmDialogPreset(elements, type);
+
+  if (title && elements.title) elements.title.innerText = title;
+  if (desc && elements.desc) elements.desc.innerText = desc;
+  if (btnText && elements.btn) elements.btn.innerText = btnText;
+  if (btnClass && elements.btn) elements.btn.className = btnClass;
+  if (iconWrapperClass && elements.iconWrapper) elements.iconWrapper.className = iconWrapperClass;
+  if (iconBgClass && elements.iconBg) elements.iconBg.className = iconBgClass;
+
+  elements.dialog.classList.remove('hidden');
+
+  return new Promise((resolve) => {
+    pendingResolver = resolve;
+  });
+}
+
+export function resolveConfirmDialog(result, doc = globalThis.document) {
+  const elements = getConfirmDialogElements(doc);
+  if (elements.dialog) elements.dialog.classList.add('hidden');
+
+  if (pendingResolver) {
+    pendingResolver(Boolean(result));
+    pendingResolver = null;
+  }
 }

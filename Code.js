@@ -93,7 +93,10 @@ function readHistory_(sheetName) {
       amount: asNumber_(row.Amount || row.amount),
       barcodeNote: asString_(row.BarcodeNote || row.barcodeNote),
       date: asString_(row.Date || row.date),
-      isoDate: asString_(row.IsoDate || row.isoDate)
+      isoDate: asString_(row.IsoDate || row.isoDate),
+      budgetGroupId: asString_(row.BudgetGroupId || row.budgetGroupId),
+      budgetGroupName: asString_(row.BudgetGroupName || row.budgetGroupName),
+      budgetGroupType: asString_(row.BudgetGroupType || row.budgetGroupType)
     };
   }).filter(function (row) { return row.id !== ''; });
 }
@@ -103,6 +106,7 @@ function readRecurring_(sheetName) {
     var id = row.ID !== undefined ? row.ID : row.id;
     var categoryId = asString_(row.CategoryId || row.categoryId || row.Category || row.category);
     var accountId = asString_(row.AccountId || row.accountId || row.Account || row.account);
+    var defaultBudgetGroupId = asString_(row.DefaultBudgetGroupId || row.defaultBudgetGroupId);
     return {
       id: asNumber_(id) || asString_(id),
       name: asString_(row.Name || row.name),
@@ -112,7 +116,26 @@ function readRecurring_(sheetName) {
       accountId: accountId,
       category: categoryId,
       account: accountId,
-      lastPaidMonth: asString_(row.LastPaidMonth || row.lastPaidMonth)
+      lastPaidMonth: asString_(row.LastPaidMonth || row.lastPaidMonth),
+      defaultBudgetGroupId: defaultBudgetGroupId
+    };
+  }).filter(function (row) { return row.id !== ''; });
+}
+
+function readBudget_(sheetName) {
+  return readRows_(sheetName).map(function (row) {
+    var id = row.ID !== undefined ? row.ID : row.id;
+    var parentId = row.ParentId !== undefined ? row.ParentId : row.parentId;
+    var isArchived = row.IsArchived !== undefined ? row.IsArchived : row.isArchived;
+    return {
+      id: asNumber_(id) || asString_(id),
+      name: asString_(row.Name || row.name),
+      budget: asNumber_(row.Budget || row.budget),
+      remaining: asNumber_(row.Remaining || row.remaining),
+      parentId: parentId ? (asNumber_(parentId) || asString_(parentId)) : null,
+      color: asString_(row.Color || row.color),
+      order: asNumber_(row.Order || row.order),
+      isArchived: isArchived === true || isArchived === 'true' || isArchived === 1 || isArchived === '1'
     };
   }).filter(function (row) { return row.id !== ''; });
 }
@@ -125,7 +148,8 @@ function doGet(e) {
       return jsonResponse({
         status: 'Success',
         history: readHistory_(profileId + '_History'),
-        recurring: readRecurring_(profileId + '_Recurring')
+        recurring: readRecurring_(profileId + '_Recurring'),
+        budget: readBudget_(profileId + '_Budget')
       });
     }
 
@@ -138,13 +162,10 @@ function doGet(e) {
   }
 }
 
-function doPost(e) {
-  try {
-    var data = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+function processSingleOperation_(ss, data) {
     var action = data.action || 'add';
     var sheetName = data.sheetName || 'User1_History';
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-
+    
     if (!data.action && data.profileId && data.name) {
       action = 'save_profile';
     }
@@ -167,10 +188,9 @@ function doPost(e) {
         }
       }
       if (!isEdit) {
-        profileSheet.appendRow([data.profileId, data.name, imageUrl]);
+        profileSheet.appendRow(["'" + String(data.profileId), data.name, imageUrl]); // Prevent ID mutation
       }
-
-      return jsonResponse({ status: 'Success', imageUrl: imageUrl });
+      return { status: 'Success', imageUrl: imageUrl };
     }
 
     if (action === 'delete_profile') {
@@ -184,81 +204,89 @@ function doPost(e) {
           }
         }
       }
-      return jsonResponse({ status: 'Success' });
+      return { status: 'Success' };
     }
 
+    var isBudget = sheetName.indexOf('Budget') !== -1;
     var isRecurring = sheetName.indexOf('Recurring') !== -1;
-    var sheet = ensureSheet_(
-      ss,
-      sheetName,
-      isRecurring
-        ? ['ID', 'Name', 'Date_Desc', 'Amount', 'Category', 'Account', 'LastPaidMonth']
-        : ['ID', 'Type', 'CategoryName', 'AccountName', 'Amount', 'BarcodeNote', 'Date', 'IsoDate'],
-      isRecurring ? '#5b3df0' : '#0f172a'
-    );
-
-    if (!isRecurring) {
-      if (action === 'add') {
-        sheet.appendRow([
-          data.id,
-          data.type,
-          data.categoryName,
-          data.accountName,
-          data.amount,
-          normalizeText_(data.barcodeNote, ''),
-          data.date,
-          normalizeText_(data.isoDate, '')
-        ]);
-      } else if (action === 'delete' || action === 'edit') {
-        upsertRowById_(
-          sheet,
-          data.id,
-          8,
-          [
-            data.id,
-            data.type,
-            data.categoryName,
-            data.accountName,
-            data.amount,
-            normalizeText_(data.barcodeNote, ''),
-            data.date,
-            normalizeText_(data.isoDate, '')
-          ],
-          action
-        );
-      }
+    
+    var headers;
+    var headerBg;
+    if (isBudget) {
+      headers = ['ID', 'Name', 'Budget', 'Remaining', 'ParentId', 'Color', 'Order', 'IsArchived'];
+      headerBg = '#4f46e5';
+    } else if (isRecurring) {
+      headers = ['ID', 'Name', 'Date_Desc', 'Amount', 'Category', 'Account', 'LastPaidMonth', 'DefaultBudgetGroupId'];
+      headerBg = '#5b3df0';
     } else {
-      if (action === 'add') {
-        sheet.appendRow([
-          data.id,
-          data.name,
-          data.desc,
-          data.amount,
-          normalizeText_(data.categoryId || data.category, ''),
-          normalizeText_(data.accountId || data.account, ''),
-          normalizeText_(data.lastPaidMonth, '')
-        ]);
-      } else if (action === 'delete' || action === 'edit') {
-        upsertRowById_(
-          sheet,
-          data.id,
-          7,
-          [
-            data.id,
-            data.name,
-            data.desc,
-            data.amount,
-            normalizeText_(data.categoryId || data.category, ''),
-            normalizeText_(data.accountId || data.account, ''),
-            normalizeText_(data.lastPaidMonth, '')
-          ],
-          action
-        );
-      }
+      headers = ['ID', 'Type', 'CategoryName', 'AccountName', 'Amount', 'BarcodeNote', 'Date', 'IsoDate', 'BudgetGroupId', 'BudgetGroupName', 'BudgetGroupType'];
+      headerBg = '#0f172a';
     }
 
-    return textResponse('Success');
+    // Instead of getSheetByName, if we had sheetId mapping we would use it, but for simplicity and legacy support, we use name.
+    var sheet = ensureSheet_(ss, sheetName, headers, headerBg);
+    
+    // Prevent Data Type Mutation by prepending ' to ID
+    var safeId = data.id !== undefined && data.id !== null ? "'" + String(data.id) : null;
+
+    var rowArray;
+    if (isBudget) {
+      rowArray = [
+        safeId, data.name, data.budget, data.remaining, normalizeText_(data.parentId, ''),
+        data.color, data.order, data.isArchived
+      ];
+    } else if (!isRecurring) {
+      rowArray = [
+        safeId, data.type, data.categoryName, data.accountName, data.amount,
+        normalizeText_(data.barcodeNote, ''), data.date, normalizeText_(data.isoDate, ''),
+        normalizeText_(data.budgetGroupId, ''), normalizeText_(data.budgetGroupName, ''), normalizeText_(data.budgetGroupType, '')
+      ];
+    } else {
+      rowArray = [
+        safeId, data.name, data.desc, data.amount, normalizeText_(data.categoryId || data.category, ''),
+        normalizeText_(data.accountId || data.account, ''), normalizeText_(data.lastPaidMonth, ''), normalizeText_(data.defaultBudgetGroupId, '')
+      ];
+    }
+
+    if (action === 'add') {
+      sheet.appendRow(rowArray);
+    } else if (action === 'delete' || action === 'edit') {
+      upsertRowById_(sheet, data.id, rowArray.length, rowArray, action);
+    }
+
+    return { status: 'Success', id: data.id, action: action };
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  try {
+    // Wait for up to 30 seconds for other concurrent requests to finish
+    lock.waitLock(30000);
+  } catch (lockError) {
+    return textResponse('Error: System is busy, could not obtain lock. Please try again.');
+  }
+
+  try {
+    var data = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (data.action === 'batch' && data.operations && Array.isArray(data.operations)) {
+      // Process batch queue
+      var results = [];
+      for (var i = 0; i < data.operations.length; i++) {
+        var op = data.operations[i];
+        results.push(processSingleOperation_(ss, op));
+      }
+      return jsonResponse({ status: 'Success', results: results });
+    } else {
+      // Legacy single operation support
+      var result = processSingleOperation_(ss, data);
+      return result.imageUrl !== undefined ? jsonResponse(result) : textResponse('Success');
+    }
   } catch (error) {
     return textResponse('Error: ' + error.message);
+  } finally {
+    // Release lock immediately after finishing
+    lock.releaseLock();
   }
 }

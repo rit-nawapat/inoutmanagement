@@ -19,6 +19,8 @@
 <body
     class="bg-slate-50 text-slate-900 antialiased font-sans w-full h-[100dvh] overflow-hidden selection:bg-indigo-100">
 
+
+
     <!-- PAGE: PROFILE SELECTION (Netflix Style) -->
     <div id="page-profile-selection"
         class="fixed inset-0 bg-[#0f172a] z-[100] flex flex-col items-center justify-center select-none">
@@ -29,8 +31,21 @@
             <i data-lucide="x" class="w-8 h-8 md:w-10 md:h-10"></i>
         </button>
 
-        <h1 class="text-white text-xl md:text-3xl font-bold mb-10 tracking-tight">ใครกำลังใช้งาน?</h1>
-        <div id="profile-grid-container" class="flex flex-wrap justify-center gap-6 max-w-3xl px-6">
+        <div id="profile-sync-indicator" class="hidden absolute bottom-6 right-4 md:bottom-8 md:right-6 z-[105] items-center gap-2 rounded-full border border-slate-800/80 bg-slate-950/35 px-3 py-1.5 text-[10px] font-medium tracking-wide text-slate-400 backdrop-blur-sm">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/50">
+                <span class="h-2.5 w-2.5 rounded-full border border-indigo-400/40 border-t-indigo-300 border-r-slate-600/20 border-b-slate-600/20 border-l-slate-600/20 animate-spin"></span>
+            </span>
+            <span id="profile-sync-indicator-text">ตรวจสอบล่าสุด</span>
+        </div>
+        <h1 id="profile-selection-title" class="text-white text-xl md:text-3xl font-bold mb-6 tracking-tight">ใครกำลังใช้งาน?</h1>
+        <div id="profile-loading-block" class="flex flex-col items-center justify-center gap-4 px-6">
+            <div class="w-14 h-14 rounded-2xl border-2 border-slate-700 border-t-indigo-500 animate-spin"></div>
+            <div class="text-center space-y-1">
+                <p class="text-white text-sm md:text-base font-bold">กำลังโหลดโปรไฟล์</p>
+                <p class="text-slate-400 text-xs md:text-sm font-medium">รอสักครู่ กำลังดึงข้อมูลผู้ใช้งานล่าสุด</p>
+            </div>
+        </div>
+        <div id="profile-grid-container" class="hidden flex flex-wrap justify-center gap-6 max-w-3xl px-6">
             <!-- ข้อมูลโปรไฟล์จะถูกเพิ่มตรงนี้ผ่าน JS -->
         </div>
     </div>
@@ -96,15 +111,18 @@
                     <button onclick="switchPage('add')" id="side-nav-add"
                         class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white"><i
                             data-lucide="plus-circle" class="w-5 h-5"></i><span>บันทึกรายการ</span></button>
+                    <button onclick="switchPage('debt')" id="side-nav-debt"
+                        class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-400 hover:bg-slate-800 hover:text-slate-200"><i
+                            data-lucide="credit-card" class="w-5 h-5"></i><span>หนี้สิน</span></button>
                     <button onclick="switchPage('history')" id="side-nav-history"
                         class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-400 hover:bg-slate-800 hover:text-slate-200"><i
                             data-lucide="history" class="w-5 h-5"></i><span>ประวัติธุรกรรม</span></button>
                 </nav>
             </div>
 
-            <div class="pt-6 border-t border-slate-800">
+            <div class="pt-6 border-t border-slate-800 flex items-center justify-between">
                 <button onclick="triggerResetConfirm('switch_profile')"
-                    class="w-full flex items-center space-x-3 px-2 py-2 rounded-xl hover:bg-slate-800 cursor-pointer transition-colors text-left group">
+                    class="flex-1 flex items-center space-x-3 px-2 py-2 rounded-xl hover:bg-slate-800 cursor-pointer transition-colors text-left group min-w-0">
                     <img id="active-profile-img-desktop"
                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E"
                         class="w-10 h-10 rounded-full object-cover bg-slate-800 shrink-0 border-2 border-transparent group-hover:border-indigo-500 transition-colors">
@@ -113,8 +131,11 @@
                         <span id="active-profile-name-desktop"
                             class="text-sm font-bold text-slate-200 block truncate">กำลังโหลด...</span>
                     </div>
-                    <i data-lucide="settings"
-                        class="w-4 h-4 text-slate-500 shrink-0 group-hover:text-white transition-colors"></i>
+                </button>
+                <button onclick="openActiveProfileSettings()"
+                    class="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-xl cursor-pointer transition-colors ml-1 shrink-0"
+                    title="แก้ไขโปรไฟล์">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
                 </button>
             </div>
         </aside>
@@ -160,6 +181,33 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Daily Allowance & Upcoming Forecast -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Daily Allowance Card -->
+                        <div class="bg-white border border-slate-200 rounded-3xl p-5 space-y-2 shadow-sm">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">ค่าใช้จ่ายแนะนำต่อวัน</span>
+                            <span id="dash-daily-allowance" class="text-2xl font-extrabold text-slate-800 block">฿0.00 / วัน</span>
+                            <span id="dash-remaining-days" class="text-[10px] text-slate-400 font-bold block">เหลือ 0 วันในเดือนนี้</span>
+                        </div>
+
+                        <!-- Forecast/Upcoming Card -->
+                        <div class="bg-white border border-slate-200 rounded-3xl p-5 space-y-3 shadow-sm flex flex-col">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-extrabold text-slate-800 text-[13px]">รายการค้างจ่ายเร็วๆ นี้</h4>
+                                    <p class="text-[9px] text-slate-400 font-bold block mt-0.5">รวมบิลประจำและยอดค้างชำระบัตร</p>
+                                </div>
+                                <span id="forecast-count" class="text-[10px] font-bold bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full">0 รายการ</span>
+                            </div>
+                            <div id="dashboard-forecast-list" class="space-y-2 max-h-[160px] overflow-y-auto pr-1 no-scrollbar flex-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Budget Summary Container -->
+                    <div id="dashboard-budget-container" class="space-y-3">
+                        <!-- Dynamically filled by renderBudgetSummary -->
+                    </div>
                 </section>
 
                 <section id="page-list" class="hidden w-full max-w-5xl mx-auto flex-col h-full space-y-4">
@@ -194,14 +242,16 @@
                                 <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มรายการประจำ
                             </button>
                         </div>
-                        <div
-                            class="hidden md:grid grid-cols-12 gap-4 px-6 py-2 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0">
-                            <div class="col-span-3">รายการ</div>
-                            <div class="col-span-2 text-center">วันที่จ่าย</div>
-                            <div class="col-span-2 text-right">จำนวนเงิน</div>
-                            <div class="col-span-2 text-center">หมวดหมู่</div>
-                            <div class="col-span-1 text-center">สถานะ</div>
-                            <div class="col-span-2 text-center">จัดการ</div>
+                        <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 shrink-0 overflow-x-auto no-scrollbar">
+                            <div class="flex items-center space-x-2 w-max">
+                                <span class="text-[10px] font-bold text-slate-400 mr-1 uppercase">บิลด่วน:</span>
+                                <button onclick="quickAddRecurring('rent')" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shadow-sm"><i data-lucide="home" class="w-3 h-3 text-indigo-500"></i><span>ค่าเช่าบ้าน</span></button>
+                                <button onclick="quickAddRecurring('electricity')" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shadow-sm"><i data-lucide="zap" class="w-3 h-3 text-amber-500"></i><span>ค่าไฟ</span></button>
+                                <button onclick="quickAddRecurring('water')" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shadow-sm"><i data-lucide="droplet" class="w-3 h-3 text-blue-500"></i><span>ค่าน้ำ</span></button>
+                                <button onclick="quickAddRecurring('internet')" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shadow-sm"><i data-lucide="wifi" class="w-3 h-3 text-purple-500"></i><span>ค่าเน็ต</span></button>
+                                <button onclick="quickAddRecurring('phone')" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shadow-sm"><i data-lucide="smartphone" class="w-3 h-3 text-emerald-500"></i><span>ค่าโทรศัพท์</span></button>
+                                <button onclick="quickAddRecurring('car')" class="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shadow-sm"><i data-lucide="car" class="w-3 h-3 text-rose-500"></i><span>ค่ารถ</span></button>
+                            </div>
                         </div>
                         <div class="overflow-y-auto p-1 md:p-0 no-scrollbar flex-1" id="recurring-list-container"></div>
                     </div>
@@ -239,10 +289,23 @@
                                     id="category-grid"></div>
                             </div>
                             <div class="bg-white p-2 lg:p-5 rounded-xl lg:rounded-3xl border border-slate-200 w-full">
-                                <span
-                                    class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block px-1 mb-1">ช่องทางการเงิน</span>
-                                <div class="w-full flex overflow-x-auto lg:flex-wrap no-scrollbar snap-x gap-1"
-                                    id="account-grid"></div>
+                                <div class="flex items-center justify-between px-1 mb-2">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">ช่องทางการเงิน</span>
+                                    <div class="bg-slate-100 p-0.5 rounded-full flex w-40">
+                                        <button type="button" onclick="setAccountTab('money')" id="tab-acc-money" class="flex-1 py-1 text-[9px] font-bold rounded-full bg-white text-slate-800 shadow-sm cursor-pointer">เงิน/โอน</button>
+                                        <button type="button" onclick="setAccountTab('debt')" id="tab-acc-debt" class="flex-1 py-1 text-[9px] font-bold rounded-full text-slate-400 cursor-pointer">บัตร/หนี้</button>
+                                    </div>
+                                </div>
+                                <div class="w-full flex overflow-x-auto lg:flex-wrap no-scrollbar snap-x gap-1" id="account-grid"></div>
+                            </div>
+                            <div id="tx-budget-group-section" class="bg-white p-2 lg:p-5 rounded-xl lg:rounded-3xl border border-slate-200 w-full">
+                                <div class="flex items-center justify-between px-1 mb-2">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">กลุ่มกระเป๋า</span>
+                                    <button type="button" onclick="openManageBudgetGroupsModal()" class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-3 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm">
+                                        <i data-lucide="settings" class="w-3 h-3"></i> จัดการกลุ่ม
+                                    </button>
+                                </div>
+                                <div class="w-full flex overflow-x-auto lg:flex-wrap no-scrollbar snap-x gap-1" id="tx-budget-group-grid"></div>
                             </div>
                         </div>
 
@@ -321,25 +384,56 @@
                     </div>
                     <div id="history-list" class="space-y-2 w-full pb-6"></div>
                 </section>
+
+                <section id="page-debt" class="hidden w-full max-w-5xl mx-auto flex-col h-full space-y-4">
+                    <div class="flex items-center space-x-2 px-1 mb-2 mt-4">
+                        <div class="bg-indigo-100 p-2 rounded-full shrink-0"><i data-lucide="credit-card"
+                                class="w-5 h-5 text-indigo-600"></i></div>
+                        <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">จัดการหนี้สิน</h2>
+                    </div>
+                    
+                    <div class="bg-indigo-600 rounded-3xl p-5 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
+                        <div class="relative z-10 space-y-1">
+                            <span class="text-xs font-bold text-indigo-100 uppercase tracking-wider block">หนี้สินคงค้างรวม</span>
+                            <div class="flex items-baseline space-x-1">
+                                <span class="text-3xl font-extrabold" id="total-debt-amount">฿0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="debt-list" class="space-y-3 pb-8">
+                        <!-- Debt items will be rendered here -->
+                    </div>
+                </section>
             </div>
 
-            <nav
-                class="md:hidden fixed bottom-0 left-0 right-0 h-[3.5rem] bg-white border-t border-slate-200 flex items-center justify-around px-2 z-30 pb-safe shrink-0">
+            <nav id="bottom-nav"
+                class="md:hidden fixed bottom-0 left-0 right-0 h-[4.5rem] bg-white border-t border-slate-200 flex items-center justify-between px-6 z-30 pb-safe shrink-0 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)]">
                 <button onclick="switchPage('dashboard')" id="bottom-nav-dashboard"
-                    class="flex flex-col items-center justify-center space-y-0.5 text-slate-400 flex-1 cursor-pointer transition-colors"><i
-                        data-lucide="layout-dashboard" class="w-4 h-4"></i><span
+                    class="flex flex-col items-center justify-center space-y-1 text-slate-400 w-12 cursor-pointer transition-colors"><i
+                        data-lucide="layout-dashboard" class="w-5 h-5"></i><span
                         class="text-[9px] font-bold">หน้าแรก</span></button>
                 <button onclick="switchPage('list')" id="bottom-nav-list"
-                    class="flex flex-col items-center justify-center space-y-0.5 text-slate-400 flex-1 cursor-pointer transition-colors"><i
-                        data-lucide="list-todo" class="w-4 h-4"></i><span
-                        class="text-[9px] font-bold">ลิสต์ประจำ</span></button>
-                <button onclick="switchPage('add')" id="bottom-nav-add"
-                    class="flex flex-col items-center justify-center space-y-0.5 text-indigo-600 flex-1 cursor-pointer transition-colors"><i
-                        data-lucide="plus-circle" class="w-4 h-4"></i><span
-                        class="text-[9px] font-bold">บันทึก</span></button>
+                    class="flex flex-col items-center justify-center space-y-1 text-slate-400 w-12 cursor-pointer transition-colors"><i
+                        data-lucide="list-todo" class="w-5 h-5"></i><span
+                        class="text-[9px] font-bold">ประจำ</span></button>
+                
+                <!-- Elevated Add Button -->
+                <div class="flex justify-center items-center w-14 h-full relative">
+                    <button onclick="switchPage('add')" id="bottom-nav-add"
+                        class="absolute bottom-3 w-14 h-14 bg-indigo-600 rounded-[1.25rem] text-white flex items-center justify-center shadow-lg shadow-indigo-300/50 cursor-pointer hover:bg-indigo-700 transition-all transform hover:scale-105">
+                        <i data-lucide="plus" class="w-7 h-7"></i>
+                    </button>
+                </div>
+
+                <button onclick="switchPage('debt')" id="bottom-nav-debt"
+                    class="flex flex-col items-center justify-center space-y-1 text-slate-400 w-12 cursor-pointer transition-colors"><i
+                        data-lucide="credit-card" class="w-5 h-5"></i><span
+                        class="text-[9px] font-bold">หนี้สิน</span></button>
                 <button onclick="switchPage('history')" id="bottom-nav-history"
-                    class="flex flex-col items-center justify-center space-y-0.5 text-slate-400 flex-1 cursor-pointer transition-colors"><i
-                        data-lucide="history" class="w-4 h-4"></i><span
+                    class="flex flex-col items-center justify-center space-y-1 text-slate-400 w-12 cursor-pointer transition-colors"><i
+                        data-lucide="history" class="w-5 h-5"></i><span
                         class="text-[9px] font-bold">ประวัติ</span></button>
             </nav>
         </div>
@@ -424,6 +518,12 @@
                             class="w-full bg-slate-50 border border-slate-200 rounded-lg px-1 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"></select>
                     </div>
                 </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1">กลุ่มกระเป๋าเริ่มต้น</label>
+                    <select id="req-budget-group"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"></select>
+                </div>
             </div>
 
             <div class="pt-2">
@@ -433,8 +533,227 @@
         </div>
     </div>
 
+    <!-- Chooser Modal for paying a recurring item without a default budget group -->
+    <div id="budget-chooser-modal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-5 space-y-3 shadow-2xl relative">
+            <button onclick="closeBudgetChooserModal()" class="absolute top-4 right-4 text-slate-400 cursor-pointer"><i
+                    data-lucide="x" class="w-4 h-4"></i></button>
+            <div class="flex items-center space-x-2 text-indigo-600 border-b border-slate-100 pb-2">
+                <div class="bg-indigo-50 p-2 rounded-xl"><i data-lucide="wallet" class="w-4 h-4"></i></div>
+                <h4 class="font-bold text-slate-800 text-sm">เลือกกลุ่มกระเป๋าเพื่อชำระเงิน</h4>
+            </div>
+            <p class="text-[10px] text-slate-500">กรุณาเลือกกลุ่มกระเป๋าที่ต้องการหักยอดจ่ายสำหรับรายการนี้</p>
+            <div class="space-y-2 pt-1">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1">กลุ่มกระเป๋า</label>
+                    <select id="chooser-budget-group"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"></select>
+                </div>
+            </div>
+            <div class="pt-2">
+                <button id="btn-confirm-pay-recurring" onclick="confirmPayRecurringWithBudget()"
+                    class="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors hover:bg-indigo-700">ยืนยันการจ่าย</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Budget Groups Modal -->
+    <div id="manage-budget-groups-modal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col">
+            <button onclick="closeManageBudgetGroupsModal()" class="absolute top-4 right-4 text-slate-400 cursor-pointer"><i
+                    data-lucide="x" class="w-4 h-4"></i></button>
+            <div class="flex items-center space-x-2 text-indigo-600 border-b border-slate-100 pb-2 shrink-0">
+                <div class="bg-indigo-50 p-2 rounded-xl"><i data-lucide="settings" class="w-4 h-4"></i></div>
+                <h4 class="font-bold text-slate-800 text-sm">จัดการกลุ่มกระเป๋า</h4>
+            </div>
+
+            <div id="budget-groups-list" class="space-y-2 overflow-y-auto flex-1 pr-1 no-scrollbar min-h-[150px]">
+                <!-- Dynamically filled with budget group rows -->
+            </div>
+
+            <div id="budget-group-form" class="border-t border-slate-100 pt-3 space-y-3 shrink-0">
+                <h5 id="budget-group-form-title" class="font-bold text-slate-800 text-xs">เพิ่มกลุ่มกระเป๋าใหม่</h5>
+                <input type="hidden" id="budget-group-id">
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">ชื่อกลุ่ม</label>
+                        <input type="text" id="budget-group-name" placeholder="เช่น กิน, เดินทาง"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-700 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">ยอดเงินตั้งต้น (฿)</label>
+                        <input type="text" inputmode="decimal" id="budget-group-amount" oninput="formatCurrencyInput(this)" placeholder="0"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-700 outline-none text-right">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">กลุ่มหลัก (ถ้าเป็นกลุ่มย่อย)</label>
+                        <select id="budget-group-parent"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-1 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                            <option value="">ไม่มี (เป็นกลุ่มหลัก)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">สีของกลุ่ม</label>
+                        <select id="budget-group-color"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-1 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                            <option value="indigo">คราม (Indigo)</option>
+                            <option value="orange">ส้ม (Orange)</option>
+                            <option value="emerald">เขียว (Emerald)</option>
+                            <option value="blue">น้ำเงิน (Blue)</option>
+                            <option value="rose">แดง (Rose)</option>
+                            <option value="amber">เหลือง (Amber)</option>
+                            <option value="purple">ม่วง (Purple)</option>
+                            <option value="teal">เขียวแกมน้ำเงิน (Teal)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex space-x-2 pt-1">
+                    <button id="btn-cancel-budget-group" onclick="cancelBudgetGroupEdit()"
+                        class="hidden w-1/3 bg-slate-100 text-slate-700 py-2 rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-200 transition-colors">ยกเลิก</button>
+                    <button id="btn-save-budget-group" onclick="saveBudgetGroup()"
+                        class="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-xs font-bold cursor-pointer hover:bg-indigo-700 transition-colors">บันทึกกลุ่มกระเป๋า</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debt Payment Modal -->
+    <div id="debt-payment-modal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-4 shadow-2xl relative">
+            <button onclick="closeDebtPaymentModal()" class="absolute top-4 right-4 text-slate-400 cursor-pointer hover:bg-slate-100 p-1 rounded-full transition-colors"><i
+                    data-lucide="x" class="w-5 h-5"></i></button>
+            
+            <div class="flex items-center space-x-3 text-indigo-600 border-b border-slate-100 pb-3 shrink-0">
+                <div class="bg-indigo-50 p-2.5 rounded-2xl"><i data-lucide="credit-card" class="w-5 h-5"></i></div>
+                <div>
+                    <h4 class="font-extrabold text-slate-800 text-[15px]">จ่ายหนี้</h4>
+                    <span class="text-[10px] text-slate-400 font-bold block" id="debt-payment-account-name">บัตรเครดิต</span>
+                </div>
+            </div>
+
+            <div class="space-y-4 py-2">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">ยอดเงินที่ต้องการจ่าย (฿)</label>
+                    <input type="text" inputmode="decimal" id="debt-payment-amount" oninput="formatCurrencyInput(this)" placeholder="0.00"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-2xl font-extrabold text-slate-800 outline-none text-right focus:border-indigo-500 focus:bg-white transition-all shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">จ่ายจากบัญชี/ช่องทาง</label>
+                    <select id="debt-payment-source"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 outline-none cursor-pointer focus:border-indigo-500 focus:bg-white transition-all">
+                        <!-- Filled by JS -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button id="btn-submit-debt-payment" onclick="submitDebtPayment()"
+                    class="w-full bg-indigo-600 text-white py-3 rounded-xl text-[13px] font-extrabold cursor-pointer transition-all hover:bg-indigo-700 shadow-md hover:shadow-lg flex items-center justify-center space-x-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    <span>ยืนยันการจ่าย</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debt Adjustment Modal -->
+    <div id="debt-adjustment-modal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-4 shadow-2xl relative">
+            <button onclick="closeDebtAdjustmentModal()" class="absolute top-4 right-4 text-slate-400 cursor-pointer hover:bg-slate-100 p-1 rounded-full transition-colors"><i
+                    data-lucide="x" class="w-5 h-5"></i></button>
+            
+            <div class="flex items-center space-x-3 text-indigo-600 border-b border-slate-100 pb-3 shrink-0">
+                <div class="bg-indigo-50 p-2.5 rounded-2xl"><i data-lucide="settings-2" class="w-5 h-5"></i></div>
+                <div>
+                    <h4 class="font-extrabold text-slate-800 text-[15px]">ตั้งค่ายอดยกมา</h4>
+                    <span class="text-[10px] text-slate-400 font-bold block" id="debt-adj-account-name">บัตรเครดิต</span>
+                </div>
+            </div>
+
+            <div class="space-y-4 py-2">
+                <p class="text-[11px] text-slate-500 font-medium">ใส่มูลค่าหนี้ที่มีอยู่เดิมก่อนใช้งานระบบ เพื่อใช้เป็นฐานคำนวณ หนี้ก้อนนี้จะไม่ถูกนับรวมเป็นรายจ่ายเดือนปัจจุบัน</p>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">ยอดยกมา / ยอดตั้งต้น (฿)</label>
+                    <input type="text" inputmode="decimal" id="debt-adj-amount" oninput="formatCurrencyInput(this)" placeholder="0.00"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-2xl font-extrabold text-slate-800 outline-none text-right focus:border-indigo-500 focus:bg-white transition-all shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">วันครบกำหนดชำระของทุกเดือน</label>
+                    <select id="debt-adj-due-day"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 outline-none cursor-pointer focus:border-indigo-500 focus:bg-white transition-all shadow-inner">
+                        <option value="">ไม่มี</option>
+                        <option value="1">ทุกวันที่ 1</option>
+                        <option value="5">ทุกวันที่ 5</option>
+                        <option value="10">ทุกวันที่ 10</option>
+                        <option value="15">ทุกวันที่ 15</option>
+                        <option value="20">ทุกวันที่ 20</option>
+                        <option value="25">ทุกวันที่ 25</option>
+                        <option value="last">ทุกสิ้นเดือน</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-2 flex space-x-2">
+                <button onclick="closeDebtAdjustmentModal()"
+                    class="w-1/3 bg-slate-100 text-slate-700 py-3 rounded-xl text-[13px] font-extrabold cursor-pointer transition-all hover:bg-slate-200">
+                    ยกเลิก
+                </button>
+                <button id="btn-submit-debt-adj" onclick="submitDebtAdjustment()"
+                    class="flex-1 bg-indigo-600 text-white py-3 rounded-xl text-[13px] font-extrabold cursor-pointer transition-all hover:bg-indigo-700 shadow-md flex items-center justify-center space-x-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>บันทึกยอดยกมา</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recurring Pay Modal -->
+    <div id="recurring-pay-modal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-4 shadow-2xl relative">
+            <button onclick="closeRecurringPayModal()" class="absolute top-4 right-4 text-slate-400 cursor-pointer hover:bg-slate-100 p-1 rounded-full transition-colors"><i
+                    data-lucide="x" class="w-5 h-5"></i></button>
+            
+            <div class="flex items-center space-x-3 text-emerald-600 border-b border-slate-100 pb-3 shrink-0">
+                <div class="bg-emerald-50 p-2.5 rounded-2xl"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                <div>
+                    <h4 class="font-extrabold text-slate-800 text-[15px]">ยืนยันการจ่ายบิล</h4>
+                    <span class="text-[10px] text-slate-400 font-bold block" id="req-pay-name">ค่าไฟ</span>
+                </div>
+            </div>
+
+            <div class="space-y-4 py-2">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">ยอดเงินที่ต้องการจ่าย (สามารถแก้ตัวเลขได้)</label>
+                    <input type="text" inputmode="decimal" id="req-pay-amount" oninput="formatCurrencyInput(this)" placeholder="0.00"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-2xl font-extrabold text-slate-800 outline-none text-right focus:border-emerald-500 focus:bg-white transition-all shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">ช่องทางการจ่าย</label>
+                    <select id="req-pay-account" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500 transition-all"></select>
+                </div>
+            </div>
+
+            <div class="pt-2 flex space-x-2">
+                <button onclick="closeRecurringPayModal()"
+                    class="w-1/3 bg-slate-100 text-slate-700 py-3 rounded-xl text-[13px] font-extrabold cursor-pointer transition-all hover:bg-slate-200">
+                    ยกเลิก
+                </button>
+                <button id="btn-submit-req-pay" onclick="submitRecurringPay()"
+                    class="flex-1 bg-emerald-600 text-white py-3 rounded-xl text-[13px] font-extrabold cursor-pointer transition-all hover:bg-emerald-700 shadow-md flex items-center justify-center space-x-2">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>บันทึกรายจ่าย</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container"
-        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center space-y-2 w-11/12 max-w-xs">
+        class="fixed top-16 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center space-y-2 w-11/12 max-w-xs pointer-events-none">
     </div>
 
     <script type="module" src="app.js"></script>

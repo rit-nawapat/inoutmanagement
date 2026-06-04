@@ -1,4 +1,4 @@
-import { createEl, setText } from './dom-helpers.mjs';
+import { createEl, setText, nextFrame } from './dom-helpers.mjs';
 import { createIcon } from './render-helpers.mjs';
 import { renderImagePreview, setModalTitle, showModal, hideModal } from './modal-helpers.mjs';
 
@@ -187,6 +187,7 @@ export async function saveProfileData({
   if (!name) { showToast('กรุณาระบุชื่อโปรไฟล์', 'error'); return; }
 
   const payload = { action: 'save_profile', profileId: id, name, oldImageUrl, imageBase64: selectedImageState.base64, mimeType: selectedImageState.mimeType, fileName: selectedImageState.fileName };
+  await nextFrame();
   const result = await apiClient.postJson(payload);
   if (result.status === 'Success') {
     const existingIndex = allProfiles.findIndex((p) => p.id === id);
@@ -226,7 +227,8 @@ export async function executeDeleteProfile({
   }
   renderProfileGridFn();
   if (!currentUserProfileId) showProfileSelectionFn();
-  showToast('ลบโปรไฟล์สำเร็จ', 'success');
-  try { await apiClient.postJson({ action: 'delete_profile', profileId: id }, { expectJson: false }); } catch {}
+  apiClient.postJson({ action: 'delete_profile', profileId: id }, { expectJson: false })
+    .then(() => showToast('ลบโปรไฟล์สำเร็จ', 'success'))
+    .catch(() => showToast('ลบในเครื่องสำเร็จ แต่เชื่อมต่อชีทล้มเหลว', 'error'));
   return allProfiles;
 }

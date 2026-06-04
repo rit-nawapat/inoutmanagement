@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   calculateExpression,
@@ -19,10 +20,70 @@ import { uiState, resetUiState } from '../src/ui-state.mjs';
 import { guessAccountForCategory, guessCategoryFromText } from '../src/catalog-service.mjs';
 import { setButtonLoading } from '../src/button-helpers.mjs';
 import { analyzeSlipText } from '../src/ocr-service.mjs';
-import { backspaceCalculator, calculateCalculator, clearCalculator, inputDigitCalculator, inputOperatorCalculator, quickPriceCalculator, resetCalculatorScanState } from '../src/calculator-service.mjs';
-import { applyTransactionSave, buildEditDraft, buildTransactionRecord } from '../src/transaction-service.mjs';
+import { backspaceCalculator, calculateCalculator, clearCalculator, handleCalculatorKeyboardInput, inputDigitCalculator, inputOperatorCalculator, quickPriceCalculator, resetCalculatorScanState } from '../src/calculator-service.mjs';
+import { applyTransactionSave, buildEditDraft, buildTransactionRecord, formatThaiDisplayDateTime, normalizeTransactionRecord } from '../src/transaction-service.mjs';
 import { createEl, sanitizeIconName, setText } from '../src/dom-helpers.mjs';
 import { createHistoryRow, createRecurringRow } from '../src/render-helpers.mjs';
+import { renderHistory, renderRecurringList, renderRecurringPreview, updateRecurringSummary } from '../src/ledger-service.mjs';
+import { calculateRemainingBalances } from '../src/budget-service.mjs';
+import { saveTransactionFlow, syncDataFromSheetFlow } from '../src/flow-service.mjs';
+import { resolveConfirmDialog } from '../src/confirm-dialog.mjs';
+import { cancelRecurringPayment, payRecurringItem } from '../src/recurring-service.mjs';
+import { SyncQueueManager } from '../src/sync-queue.mjs';
+
+test('app declares recurring handlers before exposing them globally', () => {
+  const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  const handlers = [
+    'openRecurringModal',
+    'closeRecurringModal',
+    'saveRecurringItem',
+    'executeDeleteRecurring',
+    'deleteRecurringItem',
+    'toggleFavRecurring',
+    'payRecurringItem',
+  ];
+
+  for (const handler of handlers) {
+    assert.match(source, new RegExp(`function\\s+${handler}\\s*\\(`));
+  }
+});
+
+test('profile selection includes a dedicated loading block and app toggles it during init', () => {
+  const appSource = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  const htmlSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  assert.match(htmlSource, /id="profile-loading-block"/);
+  assert.match(htmlSource, /id="profile-sync-indicator"/);
+  assert.match(htmlSource, /ตรวจสอบล่าสุด/);
+  assert.match(htmlSource, /absolute bottom-6 right-4/);
+  assert.match(htmlSource, /animate-spin/);
+  assert.match(appSource, /function\s+setProfileSelectionLoading\s*\(\s*isLoading\s*\)/);
+  assert.match(appSource, /const hasProfiles = allProfiles\.length > 0/);
+  assert.match(appSource, /profileSyncIndicatorText/);
+  assert.match(appSource, /loadingBlock\)\s+loadingBlock\.classList\.toggle\('hidden', !isLoading \|\| hasProfiles\)/);
+  assert.match(appSource, /profileGrid\)\s+profileGrid\.classList\.toggle\('hidden', isLoading && !hasProfiles\)/);
+  assert.match(appSource, /profileSyncIndicator\)\s+profileSyncIndicator\.classList\.toggle\('hidden', !isLoading \|\| !hasProfiles\)/);
+  assert.match(appSource, /setText\(profileSyncIndicatorText, isLoading \? 'ตรวจสอบล่าสุด' : ''\)/);
+  assert.match(appSource, /setProfileSelectionLoading\(true\)/);
+  assert.match(appSource, /finally\s*\{[\s\S]*setProfileSelectionLoading\(false\)/);
+});
+
+test('date writers use the shared Thai display formatter', () => {
+  const debtSource = readFileSync(new URL('../src/debt-service.mjs', import.meta.url), 'utf8');
+  const recurringSource = readFileSync(new URL('../src/recurring-service.mjs', import.meta.url), 'utf8');
+
+  assert.match(debtSource, /formatThaiDisplayDateTime\(/);
+  assert.match(recurringSource, /formatThaiDisplayDateTime\(/);
+});
+
+test('debt history UI uses a bounded scroll panel with richer row structure', () => {
+  const debtSource = readFileSync(new URL('../src/debt-service.mjs', import.meta.url), 'utf8');
+
+  assert.match(debtSource, /max-h-\[220px\]/);
+  assert.match(debtSource, /overflow-y-auto/);
+  assert.match(debtSource, /ประวัติรายการล่าสุด/);
+  assert.match(debtSource, /slice\(0,\s*8\)/);
+});
 
 test('getRecurringStorageKey namespaces recurring items by profile id', () => {
   assert.equal(getRecurringStorageKey('user_123'), 'my_recurring_list_user_123');
@@ -185,6 +246,27 @@ test('render helpers build rows with text nodes instead of interpolated html', (
       }
     );
 
+    const paidRecurringRow = createRecurringRow(
+      {
+        id: 2,
+        name: 'ค่าไฟ',
+        desc: 'ทุกเดือน',
+        amount: 700,
+        category: 'บิล',
+        color: 'bg-blue-100',
+        icon: 'receipt',
+        fav: false,
+      },
+      {
+        isPaidThisMonth: true,
+        onPay() {},
+        onCancelPay() {},
+        onToggleFav() {},
+        onEdit() {},
+        onDelete() {},
+      }
+    );
+
     const historyRow = createHistoryRow(
       {
         id: 2,
@@ -203,11 +285,130 @@ test('render helpers build rows with text nodes instead of interpolated html', (
     );
 
     assert.equal(recurringRow.tagName, 'div');
+    assert.equal(paidRecurringRow.tagName, 'div');
     assert.equal(historyRow.tagName, 'div');
+    assert.ok(recurringRow.children.length >= 2);
+    assert.ok(!String(paidRecurringRow.className).includes('opacity-60'));
+    assert.match(collectText(paidRecurringRow), /ยกเลิกจ่าย/);
     assert.match(collectText(historyRow), /เงินสด/);
     assert.match(collectText(historyRow), /สลิป: <script>/);
   } finally {
     globalThis.document = previousDocument;
+  }
+});
+
+test('ledger renderers can target alternate containers for combined history page', () => {
+  const previousDocument = globalThis.document;
+  const previousLucide = globalThis.lucide;
+
+  class FakeNode {
+    constructor(tagName = 'div') {
+      this.tagName = tagName;
+      this.children = [];
+      this.attributes = {};
+      this.className = '';
+      this.textContent = '';
+      this.innerText = '';
+      this.disabled = false;
+    }
+
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    }
+
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    }
+
+    replaceChildren(...children) {
+      this.children = [...children];
+    }
+  }
+
+  const elements = new Map();
+  const createContainer = (id) => {
+    const node = new FakeNode('div');
+    elements.set(id, node);
+    return node;
+  };
+
+  const recurringContainer = createContainer('recurring-preview-history');
+  const historyContainer = createContainer('history-list');
+  const summaryIncome = new FakeNode('span');
+  const summarySpent = new FakeNode('span');
+  const summaryRemain = new FakeNode('span');
+  const historyCount = new FakeNode('span');
+  elements.set('req-dash-income-history', summaryIncome);
+  elements.set('req-dash-spent-history', summarySpent);
+  elements.set('req-dash-remain-history', summaryRemain);
+  elements.set('history-count', historyCount);
+
+  globalThis.document = {
+    createElement(tagName) {
+      return new FakeNode(tagName);
+    },
+    createTextNode(text) {
+      const node = new FakeNode('#text');
+      node.textContent = text;
+      return node;
+    },
+    getElementById(id) {
+      return elements.get(id) || null;
+    },
+  };
+  globalThis.lucide = { createIcons() {} };
+
+  try {
+    const storage = {
+      getItem(key) {
+        if (key === 'my_recurring_list_user_1') {
+          return JSON.stringify([{ id: 1, name: 'ค่าไฟ', amount: 500, desc: 'ทุกสิ้นเดือน', categoryId: 'bills', accountId: 'cash', lastPaidMonth: '' }]);
+        }
+        return null;
+      },
+      setItem() {},
+    };
+
+    updateRecurringSummary(
+      [{ type: 'income', amount: 1000, isoDate: '2026-06-03T10:00' }],
+      storage,
+      'user_1',
+      globalThis.document,
+      {
+        incomeId: 'req-dash-income-history',
+        spentId: 'req-dash-spent-history',
+        remainId: 'req-dash-remain-history',
+      }
+    );
+
+    renderRecurringPreview({
+      storage,
+      profileId: 'user_1',
+      doc: globalThis.document,
+      lucide: globalThis.lucide,
+      containerId: 'recurring-preview-history',
+    });
+
+    renderHistory({
+      txHistory: [{ id: 10, type: 'spent', amount: 100, categoryIcon: 'receipt', categoryName: 'อาหาร', accountName: 'เงินสด', date: '2026-06-03' }],
+      onEdit() {},
+      onDelete() {},
+      doc: globalThis.document,
+      lucide: globalThis.lucide,
+      containerId: 'history-list',
+      countId: 'history-count',
+    });
+
+    assert.equal(summaryIncome.innerText, '฿1,000');
+    assert.equal(summarySpent.innerText, '฿500');
+    assert.equal(summaryRemain.innerText, '฿500');
+    assert.ok(recurringContainer.children.length > 0);
+    assert.ok(historyContainer.children.length > 0);
+    assert.equal(historyCount.innerText, '1 รายการ');
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.lucide = previousLucide;
   }
 });
 
@@ -244,7 +445,7 @@ test('resetUiState restores calculator and selection state', () => {
 });
 
 test('guessCategoryFromText maps common OCR phrases to a category', () => {
-  assert.equal(guessCategoryFromText('ชำระค่าไฟฟ้าและน้ำประปา'), 'bills');
+  assert.equal(guessCategoryFromText('ชำระค่าไฟฟ้าและน้ำประปา'), 'electricity');
   assert.equal(guessCategoryFromText('beer cold 1 bottle'), 'beverage');
 });
 
@@ -275,14 +476,47 @@ test('buildTransactionRecord composes history payloads consistently', () => {
   assert.equal(transactionRecord.sheetName, 'user_1_History');
   assert.equal(transactionRecord.slipRefNo, 'REF123');
   assert.equal(transactionRecord.isoDate, '2026-06-03T12:34');
+  assert.equal(transactionRecord.date, '3 มิ.ย. 2569 19:34:00');
   assert.equal(uiRecord.categoryIcon, 'utensils');
   assert.equal(uiRecord.accountIcon, 'banknote');
+});
+
+test('formatThaiDisplayDateTime returns a consistent Thai display string', () => {
+  const formatted = formatThaiDisplayDateTime(new Date('2026-06-03T16:35:02.118Z'));
+  assert.equal(formatted, '3 มิ.ย. 2569 23:35:02');
 });
 
 test('applyTransactionSave updates existing rows or prepends new ones', () => {
   const existing = [{ id: 1, amount: 10 }, { id: 2, amount: 20 }];
   assert.deepEqual(applyTransactionSave(existing, { id: 2, amount: 99 }, 2), [{ id: 1, amount: 10 }, { id: 2, amount: 99 }]);
   assert.deepEqual(applyTransactionSave(existing, { id: 3, amount: 30 }, null), [{ id: 3, amount: 30 }, { id: 1, amount: 10 }, { id: 2, amount: 20 }]);
+});
+
+test('normalizeTransactionRecord restores recurring-list transaction icon, account, and time', () => {
+  const normalized = normalizeTransactionRecord(
+    {
+      id: 1790827200000,
+      type: 'spent',
+      categoryName: 'ค่าไฟบ้าน',
+      accountName: '',
+      amount: 500,
+      isoDate: '2026-06-03T08:45',
+    },
+    {
+      categories: {
+        spent: [{ id: 'electricity', name: 'ค่าไฟ', icon: 'zap' }],
+        income: [],
+      },
+      accounts: [{ id: 'promptpay', name: 'พร้อมเพย์', icon: 'smartphone' }],
+      recurringItems: [{ id: 1, name: 'ค่าไฟบ้าน', categoryId: 'electricity', accountId: 'promptpay' }],
+    }
+  );
+
+  assert.equal(normalized.categoryIcon, 'zap');
+  assert.equal(normalized.accountIcon, 'smartphone');
+  assert.equal(normalized.accountName, 'พร้อมเพย์');
+  assert.match(normalized.date, /2569|2026|03\/06/);
+  assert.match(normalized.date, /08:45/);
 });
 
 test('buildEditDraft maps a transaction back into UI state values', () => {
@@ -310,6 +544,168 @@ test('buildEditDraft maps a transaction back into UI state values', () => {
   assert.equal(draft.expression, '55');
   assert.equal(draft.currentSlipRefNo, 'ABC');
   assert.equal(draft.isoDate, '2026-06-03T10:15');
+});
+
+test('syncDataFromSheetFlow normalizes history paid from recurring list', async () => {
+  const store = new Map();
+  const appStateMock = { currentPage: 'history', txHistory: [] };
+  let renderHistoryCalled = false;
+  let savedRecurring = null;
+
+  await syncDataFromSheetFlow({
+    apiClient: {
+      getJson: async () => ({
+        history: [{
+          id: 1,
+          type: 'spent',
+          categoryName: 'ค่าไฟบ้าน',
+          accountName: 'พร้อมเพย์',
+          amount: 500,
+          isoDate: '2026-06-03T08:45',
+        }],
+        recurring: [{
+          id: 10,
+          name: 'ค่าไฟบ้าน',
+          desc: 'ทุกเดือน',
+          amount: 500,
+          categoryId: 'electricity',
+          accountId: 'promptpay',
+        }],
+      }),
+    },
+    currentUserProfileId: 'user_1',
+    categories: {
+      spent: [{ id: 'electricity', name: 'ค่าไฟ', icon: 'zap' }],
+      income: [],
+    },
+    accounts: [{ id: 'promptpay', name: 'พร้อมเพย์', icon: 'smartphone' }],
+    saveRecurringItems: (storage, profileId, items) => { savedRecurring = items; },
+    localStorageRef: {
+      setItem(key, value) {
+        store.set(key, value);
+      },
+    },
+    getHistoryKey: () => 'history_user_1',
+    updateDashboardFn() {},
+    renderHistoryFn() { renderHistoryCalled = true; },
+    renderRecurringListFn() {},
+    updateRecurringSummaryFn() {},
+    appState: appStateMock,
+  });
+
+  assert.equal(appStateMock.txHistory[0].categoryIcon, 'zap');
+  assert.equal(appStateMock.txHistory[0].accountIcon, 'smartphone');
+  assert.match(appStateMock.txHistory[0].date, /08:45/);
+  assert.equal(savedRecurring[0].icon, 'zap');
+  assert.equal(renderHistoryCalled, true);
+  assert.match(store.get('history_user_1'), /categoryIcon/);
+});
+
+test('saveTransactionFlow waits for sheet sync before resetting the form', async () => {
+  const previousDocument = globalThis.document;
+  const previousLocalStorage = globalThis.localStorage;
+
+  try {
+    const store = new Map();
+    globalThis.localStorage = {
+      getItem(key) {
+        return store.has(key) ? store.get(key) : null;
+      },
+      setItem(key, value) {
+        store.set(key, value);
+      },
+    };
+
+    const txDate = { value: '2026-06-03T12:34' };
+    const scannedNote = {
+      classList: {
+        add() {},
+        remove() {},
+      },
+    };
+    globalThis.document = {
+      getElementById(id) {
+        if (id === 'tx-date') return txDate;
+        if (id === 'scanned-note') return scannedNote;
+        return null;
+      },
+    };
+
+    let resolvePost;
+    const postPromise = new Promise((resolve) => {
+      resolvePost = resolve;
+    });
+    const postCalls = [];
+    const apiClient = {
+      postJson(payload) {
+        postCalls.push(payload);
+        return postPromise;
+      },
+    };
+    const toasts = [];
+    const display = { innerText: '123' };
+    const updateDashboardFn = () => {};
+    const renderHistoryFn = () => {};
+    const renderRecurringListFn = () => {};
+    const updateRecurringSummaryFn = () => {};
+    const setLocalDatetime = () => {};
+    const showToast = (message, type) => {
+      toasts.push({ message, type });
+    };
+
+    uiState.expression = '123';
+    uiState.selectedCategory = 'food';
+    uiState.selectedAccount = 'cash';
+    uiState.selectedBudgetGroupId = '';
+    uiState.currentSlipRefNo = 'REF-1';
+    uiState.currentScannedBarcode = 'scan-1';
+    uiState.editModeId = 9;
+    appState.currentType = 'spent';
+    appState.currentPage = 'add';
+    appState.txHistory = [];
+
+    const flowPromise = saveTransactionFlow({
+      uiState,
+      appState,
+      currentUserProfileId: 'user_1',
+      categories: {
+        spent: [{ id: 'food', name: 'อาหาร', icon: 'utensils' }],
+        income: [],
+      },
+      accounts: [{ id: 'cash', name: 'เงินสด', icon: 'banknote' }],
+      budgetGroups: [],
+      getHistoryKey: () => 'history_user_1',
+      updateDashboardFn,
+      renderHistoryFn,
+      renderRecurringListFn,
+      updateRecurringSummaryFn,
+      showToast,
+      apiClient,
+      document: globalThis.document,
+      display,
+      setLocalDatetime,
+    });
+
+    let settled = false;
+    flowPromise.then(() => { settled = true; });
+    await Promise.resolve();
+    assert.equal(settled, false);
+    assert.equal(display.innerText, '123');
+    assert.equal(uiState.expression, '123');
+
+    resolvePost();
+    await flowPromise;
+
+    assert.equal(settled, true);
+    assert.equal(display.innerText, '0');
+    assert.equal(uiState.expression, '0');
+    assert.equal(uiState.editModeId, null);
+    assert.equal(postCalls.length, 1);
+    assert.equal(toasts.at(-1).type, 'success');
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.localStorage = previousLocalStorage;
+  }
 });
 
 test('setButtonLoading swaps button content without using html strings', () => {
@@ -401,7 +797,7 @@ test('analyzeSlipText extracts amount, date, ref, and category hints', () => {
   assert.equal(result.detectedAmount, 125.5);
   assert.equal(result.parsedDate, '2026-06-02T08:45');
   assert.equal(result.refNo, '12345678');
-  assert.equal(result.guessedCategoryId, 'bills');
+  assert.equal(result.guessedCategoryId, 'electricity');
   assert.equal(result.duplicateTx, null);
 });
 
@@ -416,10 +812,10 @@ test('calculator service mutates ui state predictably', () => {
   assert.equal(state.isEvaluated, true);
 
   quickPriceCalculator(state, 7);
-  assert.equal(state.expression, '7');
+  assert.equal(state.expression, '10');
 
   backspaceCalculator(state);
-  assert.equal(state.expression, '0');
+  assert.equal(state.expression, '1');
 
   resetCalculatorScanState(state);
   assert.equal(state.currentScannedBarcode, '');
@@ -427,4 +823,414 @@ test('calculator service mutates ui state predictably', () => {
 
   clearCalculator(state);
   assert.equal(state.expression, '0');
+});
+
+test('handleCalculatorKeyboardInput supports physical keyboard input', () => {
+  const state = { expression: '0', isEvaluated: false };
+
+  assert.equal(handleCalculatorKeyboardInput(state, '1'), true);
+  assert.equal(handleCalculatorKeyboardInput(state, '0'), true);
+  assert.equal(handleCalculatorKeyboardInput(state, '+'), true);
+  assert.equal(handleCalculatorKeyboardInput(state, '2'), true);
+  assert.equal(handleCalculatorKeyboardInput(state, 'Enter'), true);
+
+  assert.equal(state.expression, '12');
+  assert.equal(state.isEvaluated, true);
+
+  assert.equal(handleCalculatorKeyboardInput(state, 'Backspace'), true);
+  assert.equal(state.expression, '1');
+
+   assert.equal(handleCalculatorKeyboardInput(state, 'Escape'), true);
+  assert.equal(state.expression, '0');
+});
+
+test('calculateRemainingBalances deducts from both child and parent groups', () => {
+  const groups = [
+    { id: 1, name: 'หลัก', budget: 7000, parentId: null },
+    { id: 2, name: 'ย่อย', budget: 3000, parentId: 1 }
+  ];
+  const txHistory = [
+    { type: 'spent', amount: 500, budgetGroupId: '2', isoDate: new Date().toISOString() },
+    { type: 'spent', amount: 1000, budgetGroupId: '1', isoDate: new Date().toISOString() },
+    // A spent transaction from another month should not count
+    { type: 'spent', amount: 300, budgetGroupId: '2', isoDate: '2025-01-01T12:00' },
+    // An income transaction should not count
+    { type: 'income', amount: 2000, budgetGroupId: '2', isoDate: new Date().toISOString() }
+  ];
+
+  const result = calculateRemainingBalances(groups, txHistory);
+  const parentGroup = result.find(g => g.id === 1);
+  const childGroup = result.find(g => g.id === 2);
+
+  assert.equal(childGroup.remaining, 2500); // 3000 - 500
+  assert.equal(parentGroup.remaining, 5500); // 7000 - 500 - 1000
+});
+
+test('buildTransactionRecord includes budget group metadata', () => {
+  const groups = [
+    { id: 2, name: 'ย่อย', parentId: 1 }
+  ];
+  const inputDate = new Date();
+  const { transactionRecord } = buildTransactionRecord({
+    editModeId: null,
+    currentType: 'spent',
+    selectedCategory: 'food',
+    selectedAccount: 'cash',
+    selectedBudgetGroupId: '2',
+    budgetGroups: groups,
+    currentScannedBarcode: '',
+    currentSlipRefNo: '',
+    amount: 100,
+    inputDate,
+    currentUserProfileId: 'user_1'
+  });
+
+  assert.equal(transactionRecord.budgetGroupId, 2);
+  assert.equal(transactionRecord.budgetGroupName, 'ย่อย');
+  assert.equal(transactionRecord.budgetGroupType, 'child');
+});
+
+test('payRecurringItem uses default budget group if valid', async () => {
+  const recurringItems = [{ id: 1, name: 'ค่าไฟ', amount: 500, categoryId: 'bills', accountId: 'cash', defaultBudgetGroupId: '2', lastPaidMonth: '' }];
+  const budgetGroups = [{ id: 2, name: 'บ้าน', budget: 1000, remaining: 1000, parentId: null }];
+  const txHistory = [];
+  const appStateMock = { txHistory };
+
+  let savedItems = null;
+  let savedGroups = null;
+
+  await payRecurringItem({
+    id: 1,
+    currentUserProfileId: 'user_1',
+    getRecurringItems: () => recurringItems,
+    saveRecurringItems: (store, profileId, items) => { savedItems = items; },
+    updateDashboardFn: () => {},
+    updateRecurringSummaryFn: () => {},
+    renderRecurringListFn: () => {},
+    showToast: () => {},
+    apiClient: { postJson: async () => {} },
+    appState: appStateMock,
+    localStorageRef: { setItem: () => {} },
+    categories: { spent: [{ id: 'bills', name: 'บิล', icon: 'receipt' }] },
+    accounts: [{ id: 'cash', name: 'เงินสด' }],
+    getHistoryKey: () => 'history_key',
+    budgetGroups,
+    saveBudgetGroupsFn: (store, profileId, groups) => { savedGroups = groups; }
+  });
+
+  assert.equal(savedItems[0].lastPaidMonth, new Date().toISOString().slice(0, 7));
+  assert.equal(appStateMock.txHistory.length, 1);
+  assert.equal(appStateMock.txHistory[0].budgetGroupId, 2);
+  assert.equal(appStateMock.txHistory[0].budgetGroupName, 'บ้าน');
+  assert.equal(appStateMock.txHistory[0].budgetGroupType, 'root');
+  assert.equal(savedGroups[0].remaining, 500);
+});
+
+test('payRecurringItem falls back to budget chooser callback if no default budget group', async () => {
+  const recurringItems = [{ id: 1, name: 'ค่าไฟ', amount: 500, categoryId: 'bills', accountId: 'cash', lastPaidMonth: '' }];
+  const budgetGroups = [{ id: 2, name: 'บ้าน', budget: 1000, remaining: 1000, parentId: null }];
+  const txHistory = [];
+  const appStateMock = { txHistory };
+
+  let chooserCalled = false;
+  let savedGroups = null;
+
+  let resolveDone;
+  const donePromise = new Promise((resolve) => { resolveDone = resolve; });
+
+  await payRecurringItem({
+    id: 1,
+    currentUserProfileId: 'user_1',
+    getRecurringItems: () => recurringItems,
+    saveRecurringItems: () => {},
+    updateDashboardFn: () => {},
+    updateRecurringSummaryFn: () => {},
+    renderRecurringListFn: () => {},
+    showToast: () => {},
+    apiClient: { postJson: async () => {} },
+    appState: appStateMock,
+    localStorageRef: { setItem: () => {} },
+    categories: { spent: [{ id: 'bills', name: 'บิล', icon: 'receipt' }] },
+    accounts: [{ id: 'cash', name: 'เงินสด' }],
+    getHistoryKey: () => 'history_key',
+    budgetGroups,
+    saveBudgetGroupsFn: (store, profileId, groups) => {
+      savedGroups = groups;
+      resolveDone();
+    },
+    onRequireBudgetGroupChooser: (item, callback) => {
+      chooserCalled = true;
+      callback('2');
+    }
+  });
+
+  await donePromise;
+
+  assert.equal(chooserCalled, true);
+  assert.equal(savedGroups[0].remaining, 500);
+});
+
+test('payRecurringItem uses app confirm dialog instead of native confirm for negative balances', async () => {
+  const previousConfirm = globalThis.confirm;
+
+  try {
+    globalThis.confirm = () => {
+      throw new Error('native confirm should not be used');
+    };
+
+    const recurringItems = [{ id: 1, name: 'ค่ารถ', amount: 500, categoryId: 'bills', accountId: 'cash', defaultBudgetGroupId: '2', lastPaidMonth: '' }];
+    const budgetGroups = [{ id: 2, name: 'Main', budget: 1000, remaining: 100, parentId: null }];
+    const appStateMock = { txHistory: [] };
+    const dialogCalls = [];
+    let savedGroups = null;
+
+    await payRecurringItem({
+      id: 1,
+      currentUserProfileId: 'user_1',
+      getRecurringItems: () => recurringItems,
+      saveRecurringItems: () => {},
+      updateDashboardFn: () => {},
+      updateRecurringSummaryFn: () => {},
+      renderRecurringListFn: () => {},
+      showToast: () => {},
+      apiClient: { postJson: async () => {} },
+      appState: appStateMock,
+      localStorageRef: { setItem: () => {} },
+      categories: { spent: [{ id: 'bills', name: 'บิล', icon: 'receipt' }] },
+      accounts: [{ id: 'cash', name: 'เงินสด' }],
+      getHistoryKey: () => 'history_key',
+      budgetGroups,
+      saveBudgetGroupsFn: (store, profileId, groups) => { savedGroups = groups; },
+      showConfirmDialogFn: async (options) => {
+        dialogCalls.push(options);
+        return true;
+      },
+    });
+
+    assert.equal(dialogCalls.length, 1);
+    assert.equal(dialogCalls[0].title, 'ยอดเงินจะติดลบ');
+    assert.match(dialogCalls[0].desc, /Main/);
+    assert.equal(appStateMock.txHistory.length, 1);
+    assert.equal(savedGroups[0].remaining, 500);
+  } finally {
+    globalThis.confirm = previousConfirm;
+  }
+});
+
+test('cancelRecurringPayment clears lastPaidMonth and deletes the linked history item', async () => {
+  const previousDocument = globalThis.document;
+  const previousConfirm = globalThis.confirm;
+
+  try {
+    globalThis.confirm = () => {
+      throw new Error('native confirm should not be used');
+    };
+    globalThis.document = {
+      createElement() {
+        return {
+          className: '',
+          textContent: '',
+          children: [],
+          appendChild(child) {
+            this.children.push(child);
+            return child;
+          },
+          setAttribute() {},
+          replaceChildren() {},
+        };
+      },
+      createTextNode(text) {
+        return { textContent: text };
+      },
+      getElementById(id) {
+        if (id === 'custom-confirm-dialog') {
+          return {
+            classList: {
+              remove() {},
+              add() {},
+            },
+          };
+        }
+        return {
+          classList: { remove() {}, add() {} },
+          innerText: '',
+          className: '',
+        };
+      },
+    };
+
+    const store = new Map();
+    const items = [{
+      id: 1,
+      name: 'ค่าไฟ/ผ่อนบ้าน',
+      desc: 'ทุกเดือน',
+      amount: 500,
+      categoryId: 'bills',
+      accountId: 'cash',
+      lastPaidMonth: '2026-06',
+    }];
+
+    const storage = {
+      getItem(key) {
+        return store.has(key) ? store.get(key) : null;
+      },
+      setItem(key, value) {
+        store.set(key, value);
+      },
+    };
+
+    const apiCalls = [];
+    const apiClient = {
+      postJson(payload) {
+        apiCalls.push(payload);
+        return Promise.resolve({});
+      },
+    };
+    const toasts = [];
+    const appStateMock = {
+      txHistory: [{
+        id: 101,
+        type: 'spent',
+        recurringSourceId: 1,
+        categoryName: 'ค่าไฟ/ผ่อนบ้าน',
+        amount: 500,
+        isoDate: '2026-06-03T10:00',
+        barcodeNote: 'รายจ่ายประจำ: ทุกเดือน',
+      }],
+    };
+
+    const cancelPromise = cancelRecurringPayment({
+      id: 1,
+      currentUserProfileId: 'user_1',
+      getRecurringItems: () => items,
+      saveRecurringItems: (storeRef, profileId, nextItems) => {
+        store.set(`my_recurring_list_${profileId}`, JSON.stringify(nextItems));
+      },
+      updateDashboardFn() {},
+      updateRecurringSummaryFn() {},
+      renderRecurringListFn() {},
+      showToast(message, type) {
+        toasts.push({ message, type });
+      },
+      apiClient,
+      appState: appStateMock,
+      localStorageRef: storage,
+      budgetGroups: [],
+      saveBudgetGroupsFn() {},
+    });
+
+    await Promise.resolve();
+    resolveConfirmDialog(true);
+    await cancelPromise;
+
+    assert.equal(items[0].lastPaidMonth, '');
+    assert.equal(appStateMock.txHistory.length, 0);
+    assert.equal(store.get('my_tx_history_user_1'), JSON.stringify([]));
+    assert.ok(apiCalls.some((call) => call.sheetName === 'user_1_History' && call.action === 'delete'));
+    assert.ok(apiCalls.some((call) => call.sheetName === 'user_1_Recurring' && call.action === 'edit'));
+    assert.equal(toasts.at(-1).type, 'success');
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.confirm = previousConfirm;
+  }
+});
+
+test('SyncQueueManager coalesces queue correctly', () => {
+  const manager = new SyncQueueManager({ postJson: async () => ({}) }, null);
+  
+  // Test case 1: Add + Edit -> Merge data and keep as 'add'
+  const q1 = [
+    { id: '1', action: 'add', name: 'A', budget: 100, timestamp: 100 },
+    { id: '1', action: 'edit', name: 'A updated', timestamp: 101 }
+  ];
+  const res1 = manager.coalesceQueue(q1);
+  assert.equal(res1.length, 1);
+  assert.equal(res1[0].action, 'add');
+  assert.equal(res1[0].name, 'A updated');
+
+  // Test case 2: Add + Delete -> Remove entirely
+  const q2 = [
+    { id: '2', action: 'add', name: 'B', timestamp: 100 },
+    { id: '2', action: 'delete', timestamp: 101 }
+  ];
+  const res2 = manager.coalesceQueue(q2);
+  assert.equal(res2.length, 0);
+
+  // Test case 3: Edit + Edit -> Merge data and keep as 'edit'
+  const q3 = [
+    { id: '3', action: 'edit', name: 'C', timestamp: 100 },
+    { id: '3', action: 'edit', name: 'C updated', timestamp: 101 }
+  ];
+  const res3 = manager.coalesceQueue(q3);
+  assert.equal(res3.length, 1);
+  assert.equal(res3[0].action, 'edit');
+  assert.equal(res3[0].name, 'C updated');
+
+  // Test case 4: Edit + Delete -> Change to 'delete'
+  const q4 = [
+    { id: '4', action: 'edit', name: 'D', timestamp: 100 },
+    { id: '4', action: 'delete', timestamp: 101 }
+  ];
+  const res4 = manager.coalesceQueue(q4);
+  assert.equal(res4.length, 1);
+  assert.equal(res4[0].action, 'delete');
+});
+
+test('SyncQueueManager handles successful batch sync', async () => {
+  const mockStore = {
+    events: {},
+    publish(event, data) {
+      this.events[event] = data;
+    }
+  };
+  
+  let postPayload = null;
+  const mockApiClient = {
+    postJson: async (payload) => {
+      postPayload = payload;
+      return { status: 'Success' };
+    }
+  };
+
+  const manager = new SyncQueueManager(mockApiClient, mockStore);
+  
+  // Set up local storage mock environment
+  const previousLocalStorage = globalThis.localStorage;
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem(key) { return store.get(key) || null; },
+    setItem(key, val) { store.set(key, val); }
+  };
+  
+  Object.defineProperty(globalThis, 'navigator', {
+    value: { onLine: true },
+    configurable: true,
+    writable: true
+  });
+
+  try {
+    manager.enqueue({ id: '5', action: 'add', name: 'E' });
+    
+    // Wait for sync to complete
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    assert.ok(postPayload);
+    assert.equal(postPayload.action, 'batch');
+    assert.equal(postPayload.operations.length, 1);
+    assert.equal(postPayload.operations[0].id, '5');
+    
+    // The queue should now be empty
+    assert.equal(manager.getQueue().length, 0);
+    assert.ok(mockStore.events['sync:success']);
+    assert.equal(mockStore.events['sync:success'].syncedCount, 1);
+  } finally {
+    globalThis.localStorage = previousLocalStorage;
+    if (previousNavigator) {
+      Object.defineProperty(globalThis, 'navigator', previousNavigator);
+    } else {
+      delete globalThis.navigator;
+    }
+  }
 });

@@ -7,8 +7,12 @@ export const categories = {
     { id: 'beverage', name: 'เครื่องดื่ม', icon: 'coffee' },
     { id: 'grocery', name: 'ของใช้', icon: 'shopping-cart' },
     { id: 'transport', name: 'เดินทาง', icon: 'car' },
+    { id: 'fuel', name: 'น้ำมัน', icon: 'fuel' },
+    { id: 'electricity', name: 'ค่าไฟ', icon: 'zap' },
+    { id: 'water', name: 'ค่าน้ำ', icon: 'droplets' },
+    { id: 'internet', name: 'ค่าเน็ต', icon: 'wifi' },
+    { id: 'bills', name: 'บิลอื่นๆ', icon: 'receipt' },
     { id: 'entertainment', name: 'บันเทิง', icon: 'clapperboard' },
-    { id: 'bills', name: 'บิล/ค่าไฟ', icon: 'receipt' },
     { id: 'travel', name: 'เที่ยว', icon: 'palmtree' },
     { id: 'other_exp', name: 'อื่นๆ', icon: 'help-circle' },
   ],
@@ -16,6 +20,7 @@ export const categories = {
     { id: 'salary', name: 'เงินเดือน', icon: 'briefcase' },
     { id: 'bonus', name: 'โบนัส', icon: 'gift' },
     { id: 'investment', name: 'ลงทุน', icon: 'trending-up' },
+    { id: 'rider', name: 'ไรเดอร์', icon: 'bike' },
     { id: 'other_inc', name: 'อื่นๆ', icon: 'sparkles' },
   ],
 };
@@ -29,8 +34,13 @@ export const accounts = [
 ];
 
 const categoryMappings = [
-  { categoryId: 'bills', keywords: ['ไฟ', 'น้ำ', 'เน็ต', 'อินเทอร์เน็ต', 'โทรศัพท์', 'มือถือ', 'ส่วนกลาง', 'บ้าน', 'คอนโด', 'บัตร', 'ประกัน', 'งวด', 'เช่า', 'bill', 'electric', 'water', 'internet', 'wifi', 'phone', 'condo', 'card', 'insurance'] },
-  { categoryId: 'transport', keywords: ['รถ', 'น้ำมัน', 'ทางด่วน', 'บีทีเอส', 'bts', 'mrt', 'แท็กซี่', 'taxi', 'car', 'gas', 'fuel', 'toll', 'ปตท', 'ptt', 'shell', 'bangchak', 'บางจาก', 'เชลล์'] },
+  { categoryId: 'electricity', keywords: ['ไฟ', 'ค่าไฟ', 'electric', 'mea', 'pea'] },
+  { categoryId: 'water', keywords: ['น้ำ', 'ค่าน้ำ', 'water', 'mwa', 'pwa'] },
+  { categoryId: 'internet', keywords: ['เน็ต', 'อินเทอร์เน็ต', 'internet', 'wifi', 'ais', 'true', '3bb'] },
+  { categoryId: 'fuel', keywords: ['น้ำมัน', 'ปตท', 'ptt', 'shell', 'bangchak', 'บางจาก', 'เชลล์', 'gas', 'fuel'] },
+  { categoryId: 'rider', keywords: ['ไรเดอร์', 'rider', 'grab', 'lineman', 'foodpanda', 'shopeefood', 'lalamove', 'แกร็บ', 'ไลน์แมน'] },
+  { categoryId: 'bills', keywords: ['โทรศัพท์', 'มือถือ', 'ส่วนกลาง', 'บ้าน', 'คอนโด', 'บัตร', 'ประกัน', 'งวด', 'เช่า', 'bill', 'phone', 'condo', 'card', 'insurance'] },
+  { categoryId: 'transport', keywords: ['รถ', 'ทางด่วน', 'บีทีเอส', 'bts', 'mrt', 'แท็กซี่', 'taxi', 'car', 'toll'] },
   { categoryId: 'food', keywords: ['อาหาร', 'ข้าว', 'กิน', 'ชาบู', 'หมูกระทะ', 'บุฟเฟต์', 'food', 'shabu', 'buffet', 'lunch', 'dinner', 'kfc', 'mcdonald', 'ร้านอาหาร', 'ก๋วยเตี๋ยว', 'คาเฟ่', 'coffee', 'starbucks', 'ส้มตำ', 'ชาไข่มุก'] },
   { categoryId: 'beverage', keywords: ['กาแฟ', 'ชา', 'นม', 'น้ำดื่ม', 'เบียร์', 'เหล้า', 'coffee', 'tea', 'drink', 'beverage', 'beer'] },
   { categoryId: 'grocery', keywords: ['ของใช้', 'สบู่', 'ยาสีฟัน', 'แชมพู', 'ซื้อของ', 'ห้าง', 'โลตัส', 'เซเว่น', 'grocery', 'shopping', 'supermarket', '7-eleven', '7-11', 'lotus', 'bigc', 'big c', 'makro', 'tops', 'cj'] },
@@ -140,6 +150,7 @@ export function renderCategories({
 
 export function renderAccounts({
   selectedAccount,
+  accountTab = 'money',
   onSelectAccount,
   doc = globalThis.document,
   lucide = globalThis.lucide,
@@ -148,7 +159,11 @@ export function renderAccounts({
   if (!grid) return;
 
   grid.replaceChildren();
-  accounts.forEach((acc) => {
+
+  const DEBT_IDS = ['credit', 'spaylater'];
+  const filteredAccounts = accounts.filter(acc => accountTab === 'debt' ? DEBT_IDS.includes(acc.id) : !DEBT_IDS.includes(acc.id));
+
+  filteredAccounts.forEach((acc) => {
     const isSelected = acc.id === selectedAccount;
     const item = createEl('div', { className: 'flex-shrink-0 snap-start' });
     item.onclick = () => onSelectAccount?.(acc.id);

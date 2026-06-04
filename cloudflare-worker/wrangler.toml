@@ -3,4 +3,4 @@ main = "src/index.js"
 compatibility_date = "2026-06-02"
 
 [vars]
-# Set APPS_SCRIPT_URL as a secret or environment variable when deploying.
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby8X78WXQTlksxBxM2C2mWqgEUul7sukt0oZ3rBDwagBpnJQmt23gexZrNzq-0wTguM/exec"

@@ -3,7 +3,7 @@ export function createApiClient(baseUrl, fetchImpl = globalThis.fetch) {
     throw new Error('Missing VITE_GOOGLE_SHEET_API_URL');
   }
 
-  async function request(url, options = {}, { timeoutMs = 10000, expectJson = true } = {}) {
+  async function request(url, options = {}, { timeoutMs = 30000, expectJson = true } = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -33,7 +33,8 @@ export function createApiClient(baseUrl, fetchImpl = globalThis.fetch) {
           }
         });
       }
-      return request(url, { method: 'GET' }, { ...options, expectJson: true });
+      url.searchParams.set('_t', Date.now().toString());
+      return request(url, { method: 'GET', cache: 'no-store' }, { ...options, expectJson: true });
     },
 
     async postJson(payload, options = {}) {

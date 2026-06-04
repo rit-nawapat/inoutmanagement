@@ -35,10 +35,14 @@ function buildTargetUrl(request, env) {
 
 async function proxyRequest(request, env) {
   const targetUrl = buildTargetUrl(request, env);
-  const headers = new Headers(request.headers);
-  headers.delete('origin');
-  headers.delete('host');
-  headers.delete('referer');
+  
+  // Only forward the Content-Type header to Apps Script to prevent Google's servers
+  // from rejecting the request due to browser-specific headers (like sec-fetch-* or cookies).
+  const headers = new Headers();
+  const contentType = request.headers.get('content-type');
+  if (contentType) {
+    headers.set('content-type', contentType);
+  }
 
   const init = {
     method: request.method,
@@ -47,7 +51,7 @@ async function proxyRequest(request, env) {
   };
 
   if (request.method !== 'GET' && request.method !== 'HEAD') {
-    init.body = await request.arrayBuffer();
+    init.body = await request.text();
   }
 
   const upstream = await fetch(targetUrl.toString(), init);

@@ -17,6 +17,10 @@ export function getRecurringStorageKey(profileId) {
   return `my_recurring_list_${profileId}`;
 }
 
+export function getBudgetStorageKey(profileId) {
+  return `my_budget_groups_${profileId}`;
+}
+
 function parseJsonArray(rawValue) {
   if (!rawValue) return [];
 
@@ -41,8 +45,26 @@ export function loadRecurringItems(storage, profileId) {
   return legacyItems;
 }
 
+import { stateStore } from './state-store.mjs';
+
 export function saveRecurringItems(storage, profileId, items) {
   storage.setItem(getRecurringStorageKey(profileId), JSON.stringify(items));
+  if (stateStore) {
+    stateStore.set('recurringItems', items);
+    stateStore.saveToCache();
+  }
+}
+
+export function loadBudgetGroups(storage, profileId) {
+  return parseJsonArray(storage.getItem(getBudgetStorageKey(profileId)));
+}
+
+export function saveBudgetGroups(storage, profileId, groups) {
+  storage.setItem(getBudgetStorageKey(profileId), JSON.stringify(groups));
+  if (stateStore) {
+    stateStore.set('budgetGroups', groups);
+    stateStore.saveToCache();
+  }
 }
 
 export function loadSavedProfiles(storage) {
@@ -59,7 +81,12 @@ export function loadSavedProfiles(storage) {
 
 export function saveSavedProfiles(storage, profiles) {
   storage.setItem(SAVED_PROFILES_KEY, JSON.stringify(profiles));
+  if (stateStore) {
+    stateStore.set('profiles', profiles);
+    stateStore.saveToCache();
+  }
 }
+
 
 export function loadCurrentProfileId(storage) {
   return storage.getItem(CURRENT_PROFILE_KEY) || null;

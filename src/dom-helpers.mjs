@@ -23,3 +23,13 @@ export function sanitizeIconName(iconName, fallback = 'help-circle') {
 export function clearChildren(element) {
   element.replaceChildren();
 }
+
+export function nextFrame() {
+  return new Promise((resolve) => {
+    if (typeof globalThis.requestAnimationFrame === 'function') {
+      globalThis.requestAnimationFrame(() => resolve());
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
