@@ -235,7 +235,7 @@ export function renderBudgetSelector({
 
   if (activeGroups.length === 0) {
     const emptyMsg = createEl('div', { className: 'text-[10px] font-medium text-slate-400 py-1.5 px-2' });
-    emptyMsg.innerText = 'ยังไม่มีกลุ่มกระเป๋า กด "จัดการกลุ่ม" เพื่อเริ่มใช้งาน';
+    emptyMsg.innerText = 'ยังไม่มีกระเป๋าให้เลือก';
     container.appendChild(emptyMsg);
     return;
   }
@@ -245,13 +245,13 @@ export function renderBudgetSelector({
   const allChip = createEl('div', { className: 'flex-shrink-0 snap-start' });
   allChip.onclick = () => onSelect?.('');
   const allPill = createEl('div', {
-    className: `flex items-center space-x-1 py-1.5 px-3 rounded-lg text-[9px] font-bold border transition-colors cursor-pointer ${noGroupSelected
+    className: `flex items-center space-x-1 py-1.5 px-2.5 rounded-lg text-[8px] lg:text-[9px] lg:py-2 lg:px-3 font-bold border transition-colors cursor-pointer ${noGroupSelected
         ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
         : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
       }`,
   });
   allPill.appendChild(createIcon('wallet', 'w-3 h-3'));
-  allPill.appendChild(createEl('span', { text: 'ไม่ระบุกลุ่ม' }));
+  allPill.appendChild(createEl('span', { text: 'ไม่ใช้กระเป๋า' }));
   allChip.appendChild(allPill);
   container.appendChild(allChip);
 
@@ -264,7 +264,7 @@ export function renderBudgetSelector({
     chip.onclick = () => onSelect?.(group.id.toString());
 
     const pill = createEl('div', {
-      className: `flex items-center space-x-1.5 py-1.5 px-3 rounded-lg text-[9px] font-bold border transition-all cursor-pointer ${isSelected
+      className: `flex items-center space-x-1 py-1.5 px-2.5 rounded-lg text-[8px] lg:text-[9px] lg:py-2 lg:px-3 font-bold border transition-all cursor-pointer ${isSelected
           ? `${gColor.fill.split(' ')[0]} border-transparent text-white shadow-sm scale-105`
           : `bg-white border-slate-200 text-slate-600 hover:bg-slate-50`
         }`,

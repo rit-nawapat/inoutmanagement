@@ -85,6 +85,35 @@ test('debt history UI uses a bounded scroll panel with richer row structure', ()
   assert.match(debtSource, /slice\(0,\s*8\)/);
 });
 
+test('mobile add page uses a compact one-page layout and removes OCR controls', () => {
+  const appSource = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  const htmlSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  assert.match(htmlSource, /เลือกวันเวลา/);
+  assert.match(htmlSource, /ช่องทางชำระเงิน/);
+  assert.match(htmlSource, /กระเป๋าที่ต้องการใช้/);
+  assert.match(htmlSource, /id="account-grid"/);
+  assert.match(htmlSource, /id="tx-budget-group-grid"/);
+  assert.match(htmlSource, /grid-cols-3/);
+  assert.match(htmlSource, /overflow-x-auto no-scrollbar snap-x gap-2/);
+  assert.match(htmlSource, /id="tx-date-compact-row"/);
+  assert.doesNotMatch(htmlSource, /id="tab-acc-money"/);
+  assert.doesNotMatch(htmlSource, /ข้อมูลประกอบรายการ/);
+  assert.doesNotMatch(htmlSource, /id="ocr-file-input"/);
+  assert.doesNotMatch(htmlSource, /processSlipOCR\(this\)/);
+  assert.doesNotMatch(appSource, /window\.processSlipOCR\s*=/);
+  assert.doesNotMatch(appSource, /function\s+toggleAddDetails\s*\(/);
+});
+
+test('desktop add page uses a dedicated two-column layout', () => {
+  const htmlSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  assert.match(htmlSource, /lg:grid lg:grid-cols-\[minmax\(380px,440px\)_minmax\(0,1fr\)\]/);
+  assert.match(htmlSource, /lg:sticky lg:top-0/);
+  assert.match(htmlSource, /lg:min-h-\[420px\]/);
+  assert.match(htmlSource, /lg:flex-wrap/);
+});
+
 test('getRecurringStorageKey namespaces recurring items by profile id', () => {
   assert.equal(getRecurringStorageKey('user_123'), 'my_recurring_list_user_123');
 });

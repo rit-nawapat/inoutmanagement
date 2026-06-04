@@ -113,13 +113,10 @@ import {
     pressOp,
     pressClear,
     calculate,
-    playScanSuccessSound,
 } from './src/calculator-service.mjs';
 
 // OCR service
 import {
-    initOcrUi,
-    processSlipOCR,
     showScannedNote,
     autoSelectCategoryByName,
 } from './src/ocr-service.mjs';
@@ -171,17 +168,6 @@ initDebtUi({
 initCalculatorUi({
     get uiState() { return uiState; },
     saveDraft
-});
-
-initOcrUi({
-    get appState() { return appState; },
-    get uiState() { return uiState; },
-    get categories() { return categories; },
-    get accounts() { return accounts; },
-    playScanSuccessSound,
-    showToast,
-    renderCategories,
-    renderAccounts
 });
 
 initBudgetUi({
@@ -573,6 +559,7 @@ function renderAccounts() {
     renderAccountsService({
         selectedAccount: uiState.selectedAccount,
         accountTab: uiState.accountTab,
+        showAllAccounts: true,
         onSelectAccount: (id) => {
             uiState.selectedAccount = id;
             renderAccounts();
@@ -944,7 +931,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 window.switchPage = switchPage;
 window.triggerResetConfirm = triggerResetConfirm;
 window.setType = setType;
-window.processSlipOCR = processSlipOCR;
 window.openRecurringModal = openRecurringModal;
 window.closeRecurringModal = closeRecurringModal;
 window.saveRecurringItem = saveRecurringItem;

@@ -121,7 +121,7 @@ export function renderCategories({
   grid.replaceChildren();
   categories[currentType].forEach((cat) => {
     const isSelected = cat.id === selectedCategory;
-    const item = createEl('div', { className: 'flex-shrink-0 flex flex-col items-center cursor-pointer snap-start min-w-[50px]' });
+    const item = createEl('div', { className: 'flex-shrink-0 flex flex-col items-center cursor-pointer snap-start min-w-[56px] lg:min-w-[72px]' });
     item.onclick = () => {
       onSelectCategory?.(cat.id);
       if (currentType === 'spent') {
@@ -134,12 +134,12 @@ export function renderCategories({
     };
 
     const iconWrap = createEl('div', {
-      className: `w-10 h-10 flex items-center justify-center rounded-xl border ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-500'}`,
+      className: `w-11 h-11 md:w-10 md:h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-xl border transition-colors ${isSelected ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-500'}`,
     });
     iconWrap.appendChild(createIcon(cat.icon, 'w-4 h-4'));
     item.appendChild(iconWrap);
     item.appendChild(createEl('span', {
-      className: `text-[9px] font-bold mt-1 ${isSelected ? 'text-indigo-600' : 'text-slate-500'}`,
+      className: `text-[9px] md:text-[9px] lg:text-[10px] font-bold mt-1 text-center leading-tight ${isSelected ? 'text-indigo-600' : 'text-slate-500'}`,
       text: cat.name,
     }));
     grid.appendChild(item);
@@ -151,6 +151,7 @@ export function renderCategories({
 export function renderAccounts({
   selectedAccount,
   accountTab = 'money',
+  showAllAccounts = false,
   onSelectAccount,
   doc = globalThis.document,
   lucide = globalThis.lucide,
@@ -161,14 +162,16 @@ export function renderAccounts({
   grid.replaceChildren();
 
   const DEBT_IDS = ['credit', 'spaylater'];
-  const filteredAccounts = accounts.filter(acc => accountTab === 'debt' ? DEBT_IDS.includes(acc.id) : !DEBT_IDS.includes(acc.id));
+  const filteredAccounts = showAllAccounts
+    ? accounts
+    : accounts.filter(acc => accountTab === 'debt' ? DEBT_IDS.includes(acc.id) : !DEBT_IDS.includes(acc.id));
 
   filteredAccounts.forEach((acc) => {
     const isSelected = acc.id === selectedAccount;
     const item = createEl('div', { className: 'flex-shrink-0 snap-start' });
     item.onclick = () => onSelectAccount?.(acc.id);
     const pill = createEl('div', {
-      className: `flex items-center space-x-1 py-1.5 px-3 rounded-lg text-[9px] font-bold border ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500'}`,
+      className: `flex items-center space-x-1 py-1.5 px-2.5 rounded-lg text-[8px] lg:text-[9px] lg:py-2 lg:px-3 font-bold border transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600'}`,
     });
     pill.appendChild(createIcon(acc.icon, 'w-3 h-3'));
     pill.appendChild(createEl('span', { text: acc.name }));
