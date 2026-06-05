@@ -238,7 +238,7 @@ function processSingleOperation_(ss, data) {
     } else if (!isRecurring) {
       rowArray = [
         safeId, data.type, data.categoryName, data.accountName, data.amount,
-        normalizeText_(data.barcodeNote, ''), data.date, normalizeText_(data.isoDate, ''),
+        normalizeText_(data.barcodeNote, ''), "'" + String(normalizeText_(data.date, '')), "'" + String(normalizeText_(data.isoDate, '')),
         normalizeText_(data.budgetGroupId, ''), normalizeText_(data.budgetGroupName, ''), normalizeText_(data.budgetGroupType, '')
       ];
     } else {

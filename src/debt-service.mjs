@@ -307,7 +307,7 @@ export async function submitDebtPayment(doc = globalThis.document) {
   const loadingState = setButtonLoading(btn, { label: 'กำลังบันทึก...', iconClass: 'w-4 h-4' });
 
   const now = new Date();
-  const isoDate = now.toISOString();
+  const isoDate = now.toISOString().slice(0, 16);
   const dateStr = formatThaiDisplayDateTime(now);
 
   const transactionRecord = {
@@ -411,7 +411,7 @@ export async function submitDebtAdjustment(doc = globalThis.document) {
   // สร้าง transaction เฉพาะเมื่อมียอดเงิน > 0
   if (amount > 0) {
       const now = new Date();
-      const isoDate = now.toISOString();
+      const isoDate = now.toISOString().slice(0, 16);
       const dateStr = formatThaiDisplayDateTime(now);
 
       const transactionRecord = {

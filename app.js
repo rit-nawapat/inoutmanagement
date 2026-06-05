@@ -1046,6 +1046,7 @@ function saveDraft() {
         currentSlipRefNo: uiState.currentSlipRefNo,
         currentScannedBarcode: uiState.currentScannedBarcode,
         txDate: document.getElementById('tx-date')?.value,
+        isDateManuallyChanged: isDateManuallyChanged,
     };
     if (stateStore) {
         stateStore.set('uiState', { ...stateStore.get('uiState'), draftTransaction: draft }, true);
@@ -1066,8 +1067,11 @@ function loadDraft() {
             uiState.currentScannedBarcode = draft.currentScannedBarcode || '';
             const txDate = document.getElementById('tx-date');
             if (draft.txDate && txDate && isDraftTransactionDateFresh(draft.savedAt)) {
+                isUpdatingProgrammatically = true;
                 txDate.value = draft.txDate;
                 txDate.dispatchEvent(new Event('change', { bubbles: true }));
+                isDateManuallyChanged = draft.isDateManuallyChanged || false;
+                isUpdatingProgrammatically = false;
             }
             
             // Re-render UI
