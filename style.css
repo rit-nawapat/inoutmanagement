@@ -164,6 +164,42 @@ body {
     margin-bottom: 0 !important;
     border-radius: 0.875rem;
   }
+
+  /* Tall screens spacing optimization (Viewport height >= 780px) */
+  @media (min-height: 780px) {
+    body.is-add-page #tx-options-card {
+      padding: 0.95rem 0.95rem !important;
+      gap: 1.1rem !important;
+    }
+
+    #tx-form-body {
+      gap: 1.1rem !important;
+    }
+
+    #category-grid {
+      gap: 0.5rem !important;
+    }
+
+    #account-grid,
+    #tx-budget-group-grid {
+      gap: 0.5rem !important;
+    }
+
+    /* Expand pill paddings on taller screen heights to occupy space naturally */
+    #account-grid > div > div,
+    #tx-budget-group-grid > div > div {
+      padding-top: 0.45rem !important;
+      padding-bottom: 0.45rem !important;
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
+    }
+
+    #category-grid > div {
+      padding-top: 0.25rem !important;
+      padding-bottom: 0.25rem !important;
+      min-width: 62px !important;
+    }
+  }
 }
 
 .btn-key,
