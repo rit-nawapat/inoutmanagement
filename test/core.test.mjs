@@ -47,6 +47,15 @@ test('app declares recurring handlers before exposing them globally', () => {
   for (const handler of handlers) {
     assert.match(source, new RegExp(`function\\s+${handler}\\s*\\(`));
   }
+
+  assert.match(source, /function\s+setupStandalonePullToRefresh\s*\(/);
+  assert.match(source, /display-mode:\s*standalone/);
+  assert.match(source, /navigator\??\.standalone/);
+  assert.match(source, /syncDataFromSheet\(\{\s*force:\s*true\s*\}\)/);
+  assert.match(source, /showToast\('รีเฟรชข้อมูลล่าสุดแล้ว', 'success'\)/);
+  assert.match(source, /renderRecurringListFn:\s*renderRecurringList/);
+  assert.match(source, /updateRecurringSummaryFn:\s*updateRecurringSummary/);
+  assert.match(source, /budgetGroups:\s*allBudgetGroups/);
 });
 
 test('profile selection includes a dedicated loading block and app toggles it during init', () => {

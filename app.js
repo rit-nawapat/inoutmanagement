@@ -524,6 +524,13 @@ function setLocalDatetime() {
 let touchStartX = 0, touchEndX = 0;
 const pageOrder = ['dashboard', 'list', 'add', 'debt', 'history'];
 
+function isStandalonePwa() {
+    return Boolean(
+        window.matchMedia?.('(display-mode: standalone)')?.matches ||
+        window.navigator?.standalone
+    );
+}
+
 const mainTouchZone = document.getElementById('main-touch-zone');
 if (mainTouchZone) {
     mainTouchZone.addEventListener('touchstart', (e) => {
@@ -540,6 +547,83 @@ if (mainTouchZone) {
     }, { passive: true });
 } else {
     console.error("Warning: Element #main-touch-zone not found in DOM.");
+}
+
+function setupStandalonePullToRefresh() {
+    const mainContent = document.getElementById('main-content-scroll');
+    if (!mainContent) return;
+
+    let startY = 0;
+    let pullDistance = 0;
+    let isPulling = false;
+    let isRefreshing = false;
+
+    const canUsePullToRefresh = () => window.innerWidth <= 767 && isStandalonePwa();
+    const resetPullVisual = () => {
+        mainContent.style.transition = 'transform 180ms ease';
+        mainContent.style.transform = 'translateY(0px)';
+        window.setTimeout(() => {
+            mainContent.style.transition = '';
+        }, 180);
+    };
+
+    mainContent.addEventListener('touchstart', (event) => {
+        if (!canUsePullToRefresh() || isRefreshing) return;
+        if (mainContent.scrollTop > 0) return;
+        if (event.target.closest('button, input, textarea, select, dialog, [role="dialog"]')) return;
+        startY = event.touches[0]?.clientY || 0;
+        pullDistance = 0;
+        isPulling = false;
+    }, { passive: true });
+
+    mainContent.addEventListener('touchmove', (event) => {
+        if (!canUsePullToRefresh() || isRefreshing || !startY) return;
+        if (mainContent.scrollTop > 0) return;
+
+        const currentY = event.touches[0]?.clientY || 0;
+        const deltaY = currentY - startY;
+        if (deltaY <= 0) return;
+
+        isPulling = true;
+        pullDistance = Math.min(88, deltaY * 0.42);
+        mainContent.style.transition = 'none';
+        mainContent.style.transform = `translateY(${pullDistance}px)`;
+        event.preventDefault();
+    }, { passive: false });
+
+    mainContent.addEventListener('touchend', async () => {
+        if (!isPulling) {
+            startY = 0;
+            return;
+        }
+
+        const shouldRefresh = pullDistance >= 56;
+        startY = 0;
+        isPulling = false;
+
+        if (!shouldRefresh) {
+            resetPullVisual();
+            return;
+        }
+
+        isRefreshing = true;
+        mainContent.style.transition = 'transform 180ms ease';
+        mainContent.style.transform = 'translateY(32px)';
+
+        try {
+            await syncDataFromSheet({ force: true });
+            showToast('รีเฟรชข้อมูลล่าสุดแล้ว', 'success');
+        } catch (error) {
+            console.error('Pull-to-refresh failed:', error);
+            showToast('รีเฟรชไม่สำเร็จ', 'error');
+        } finally {
+            pullDistance = 0;
+            resetPullVisual();
+            window.setTimeout(() => {
+                isRefreshing = false;
+            }, 180);
+        }
+    }, { passive: true });
 }
 
 function switchPage(pageId) {
@@ -828,9 +912,12 @@ async function executeDelete(id) {
         id,
         appState,
         currentUserProfileId,
+        budgetGroups: allBudgetGroups,
         getHistoryKey,
         updateDashboardFn: updateDashboard,
         renderHistoryFn: renderHistory,
+        renderRecurringListFn: renderRecurringList,
+        updateRecurringSummaryFn: updateRecurringSummary,
         showToast,
         apiClient,
     });
@@ -998,6 +1085,7 @@ const display = document.getElementById('display');
 document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
     setupViewportMetricListeners();
+    setupStandalonePullToRefresh();
     
     const txDate = document.getElementById('tx-date');
     if (txDate) {

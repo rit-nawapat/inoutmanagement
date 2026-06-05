@@ -281,11 +281,11 @@ export async function executeDeleteFlow({
 
   updateDashboardFn();
   if (appState.currentPage === 'history') {
-    renderRecurringListFn();
-    updateRecurringSummaryFn();
-    renderHistoryFn();
+    renderRecurringListFn?.();
+    updateRecurringSummaryFn?.();
+    renderHistoryFn?.();
   } else {
-    renderHistoryFn();
+    renderHistoryFn?.();
   }
 
   if (syncQueueInstance) {
@@ -297,4 +297,3 @@ export async function executeDeleteFlow({
       .catch(() => showToast('ลบในเครื่องสำเร็จ แต่เชื่อมต่อชีทล้มเหลว', 'error'));
   }
 }
-
