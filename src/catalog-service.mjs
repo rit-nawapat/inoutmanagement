@@ -27,10 +27,10 @@ export const categories = {
 
 export const accounts = [
   { id: 'cash', name: 'เงินสด', icon: 'banknote' },
-  { id: 'credit', name: 'บัตรเครดิต', icon: 'credit-card' },
-  { id: 'spaylater', name: 'SPayLater', icon: 'zap' },
   { id: 'qrscan', name: 'สแกนจ่าย', icon: 'scan' },
   { id: 'promptpay', name: 'พร้อมเพย์', icon: 'smartphone' },
+  { id: 'credit', name: 'บัตรเครดิต', icon: 'credit-card' },
+  { id: 'spaylater', name: 'SPayLater', icon: 'zap' },
 ];
 
 const categoryMappings = [
@@ -121,7 +121,7 @@ export function renderCategories({
   grid.replaceChildren();
   categories[currentType].forEach((cat) => {
     const isSelected = cat.id === selectedCategory;
-    const item = createEl('div', { className: `flex-shrink-0 flex flex-col items-center cursor-pointer snap-start min-w-[56px] lg:min-w-[72px] max-md:justify-center max-md:aspect-square max-md:rounded-[20px] max-md:border max-md:transition-all max-md:gap-1.5 ${isSelected ? 'max-md:bg-indigo-600 max-md:border-indigo-600 max-md:text-white max-md:shadow-md' : 'max-md:bg-white max-md:border-slate-100 max-md:text-slate-600 max-md:shadow-sm'}` });
+    const item = createEl('div', { className: `flex-shrink-0 flex flex-col items-center cursor-pointer snap-start min-w-[56px] lg:min-w-[72px] max-md:justify-center max-md:py-2 max-md:rounded-2xl max-md:border max-md:transition-all max-md:gap-0.5 ${isSelected ? 'max-md:bg-indigo-600 max-md:border-indigo-600 max-md:text-white max-md:shadow-md' : 'max-md:bg-white max-md:border-slate-200/80 max-md:text-slate-600 max-md:shadow-sm'}` });
     item.onclick = () => {
       onSelectCategory?.(cat.id);
       if (currentType === 'spent') {
@@ -134,12 +134,12 @@ export function renderCategories({
     };
 
     const iconWrap = createEl('div', {
-      className: `flex items-center justify-center md:rounded-xl md:border transition-colors max-md:w-6 max-md:h-6 md:w-10 md:h-10 lg:w-12 lg:h-12 ${isSelected ? 'md:border-indigo-600 md:bg-indigo-600 md:text-white md:shadow-sm' : 'md:border-slate-200 md:bg-white md:text-slate-500'}`,
+      className: `flex items-center justify-center md:rounded-xl md:border transition-colors max-md:w-8 max-md:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 max-md:bg-transparent max-md:border-none ${isSelected ? 'md:border-indigo-600 md:bg-indigo-600 md:text-white md:shadow-sm' : 'md:border-slate-200 md:bg-white md:text-slate-500'}`,
     });
-    iconWrap.appendChild(createIcon(cat.icon, 'max-md:w-7 max-md:h-7 md:w-4 md:h-4'));
+    iconWrap.appendChild(createIcon(cat.icon, 'max-md:w-6 max-md:h-6 md:w-4 md:h-4'));
     item.appendChild(iconWrap);
     item.appendChild(createEl('span', {
-      className: `text-[9px] md:text-[9px] lg:text-[10px] font-bold md:mt-1 text-center leading-tight ${isSelected ? 'md:text-indigo-600' : 'md:text-slate-500'}`,
+      className: `text-[10px] md:text-[9px] lg:text-[10px] font-bold md:mt-1 text-center leading-tight max-md:mt-0 ${isSelected ? 'max-md:text-white md:text-indigo-600' : 'max-md:text-slate-500/90 md:text-slate-500'}`,
       text: cat.name,
     }));
     grid.appendChild(item);
@@ -172,9 +172,9 @@ export function renderAccounts({
     const item = createEl('div', { className: 'flex-shrink-0 snap-start' });
     item.onclick = () => onSelectAccount?.(acc.id);
     const pill = createEl('div', {
-      className: `flex items-center space-x-1.5 max-md:py-2.5 max-md:px-4 md:py-1.5 md:px-2.5 max-md:rounded-xl md:rounded-lg text-[11px] md:text-[8px] lg:text-[9px] lg:py-2 lg:px-3 font-bold border transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white max-md:border-slate-100 md:border-slate-200 text-slate-600 max-md:shadow-sm'}`,
+      className: `flex items-center space-x-1.5 max-md:py-2.5 max-md:px-4 md:py-2 md:px-3.5 max-md:rounded-2xl md:rounded-xl text-xs md:text-[10px] lg:text-xs lg:py-2.5 lg:px-4.5 font-bold border transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white max-md:border-slate-100 md:border-slate-200 text-slate-600 max-md:shadow-sm'}`,
     });
-    pill.appendChild(createIcon(acc.icon, 'max-md:w-4 max-md:h-4 md:w-3 md:h-3'));
+    pill.appendChild(createIcon(acc.icon, 'max-md:w-4.5 max-md:h-4.5 md:w-3.5 md:h-3.5'));
     pill.appendChild(createEl('span', { text: acc.name }));
     item.appendChild(pill);
     grid.appendChild(item);

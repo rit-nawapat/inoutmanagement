@@ -91,11 +91,12 @@ body {
     height: 100%;
     min-height: 0;
     display: flex;
+    flex-direction: column;
     gap: 0.3rem;
   }
 
   #tx-calculator-column {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -124,11 +125,14 @@ body {
   }
 
   body.is-add-page #tx-options-card {
-    flex: 0 0 var(--add-options-height);
+    flex: 1 1 auto;
     min-height: 0;
-    max-height: var(--add-options-height);
-    padding: 0.45rem !important;
-    gap: 0.35rem;
+    max-height: none;
+    padding: 0.75rem 0.85rem !important;
+    gap: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
   }
 
   #category-grid {

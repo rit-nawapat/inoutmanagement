@@ -257,15 +257,15 @@
                     </div>
                 </section>
 
-                <section id="page-add" class="hidden flex-col w-full max-w-6xl mx-auto flex-1 min-h-0 max-md:overflow-y-auto md:overflow-hidden pb-1 lg:pb-6 max-md:no-scrollbar">
-                    <div class="flex flex-col gap-1.5 lg:gap-6 max-md:flex-none md:flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(380px,440px)_minmax(0,1fr)] lg:items-start">
+                <section id="page-add" class="hidden flex-col w-full max-w-6xl mx-auto flex-1 min-h-0 max-md:overflow-hidden md:overflow-hidden pb-1 lg:pb-6 max-md:no-scrollbar">
+                    <div class="flex flex-col gap-1.5 lg:gap-6 max-md:flex-1 max-md:min-h-0 md:flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(380px,440px)_minmax(0,1fr)] lg:items-start">
                         <div id="tx-calculator-column" class="flex flex-col gap-1.5 lg:gap-3 lg:sticky lg:top-0 shrink-0 lg:flex-1 lg:min-h-0">
                         <div class="max-md:bg-indigo-50/50 max-md:border-none md:bg-white rounded-2xl border border-slate-200 px-4 py-3 md:px-5 md:py-4 shrink-0">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0 flex-1">
                                     <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">ยอดที่ต้องการบันทึก</span>
                                     <input id="display-input" type="text" inputmode="decimal" 
-                                        class="md:hidden w-full bg-transparent outline-none text-[28px] leading-none font-extrabold text-slate-800 tracking-tight mt-0.5" 
+                                        class="md:hidden w-full bg-transparent outline-none text-[38px] leading-none font-black text-slate-900 tracking-tight mt-0.5" 
                                         value="0">
                                     <div id="display"
                                         class="hidden md:block text-[28px] leading-none lg:text-5xl font-extrabold text-slate-800 tracking-tight truncate mt-0.5">
@@ -308,60 +308,65 @@
                                     <button onclick="pressKey('.')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">.</button>
                                     <button onclick="pressKey('0')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">0</button>
                                     <button onclick="pressClear()" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="delete" class="w-4 h-4 mx-auto"></i></button>
-                                    <button onclick="calculate()" class="btn-op min-h-[38px] lg:min-h-[72px] h-full lg:h-full bg-[#5b3df0] text-white border-indigo-600 active:bg-indigo-800">=</button>
+                                        <button onclick="calculate()" class="btn-op min-h-[38px] lg:min-h-[72px] h-full lg:h-full bg-[#5b3df0] text-white border-indigo-600 active:bg-indigo-800">=</button>
                                 </div>
                             </div>
                         </div>
                         </div>
 
-                        <div id="tx-options-card" class="max-md:bg-transparent max-md:border-none max-md:p-0 md:bg-white rounded-2xl md:border md:border-slate-200 p-2.5 md:p-5 flex flex-col gap-4 md:gap-5 max-md:flex-none md:flex-1 max-md:min-h-fit md:min-h-0 max-md:overflow-visible md:overflow-y-auto no-scrollbar">
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ</span>
-                                <div class="bg-slate-100 p-0.5 rounded-full flex w-28 shrink-0">
-                                    <button onclick="setType('spent')" id="tab-spent"
-                                        class="flex-1 py-1 text-[10px] font-bold rounded-full bg-white text-slate-800 shadow-sm cursor-pointer">รายจ่าย</button>
-                                    <button onclick="setType('income')" id="tab-income"
-                                        class="flex-1 py-1 text-[10px] font-bold rounded-full text-slate-400 cursor-pointer">รายรับ</button>
-                                </div>
-                            </div>
-
-                            <div id="tx-date-compact-row" class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 max-md:bg-white md:bg-slate-50 px-3 py-3 md:py-1.5 shadow-sm max-md:shadow-sm">
-                                <div class="flex items-center gap-2">
-                                    <i data-lucide="calendar-days" class="w-4 h-4 text-slate-400"></i>
-                                    <span class="text-xs font-bold text-slate-700 max-md:text-sm">เลือกวันเวลา</span>
-                                </div>
-                                <div class="flex items-center gap-1">
-                                    <input type="datetime-local" id="tx-date"
-                                        class="min-w-0 w-fit bg-transparent text-xs font-bold text-slate-800 outline-none text-right max-md:text-sm">
-                                </div>
-                            </div>
-
-                            <div class="space-y-1.5">
-                                <div class="flex items-center justify-between">
-                                    <span class="max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[10px] font-bold uppercase tracking-wider text-slate-400">หมวดหมู่</span>
-                                </div>
-                                <div class="w-full max-md:grid max-md:grid-cols-4 max-md:gap-3 md:flex md:overflow-x-auto md:no-scrollbar md:snap-x md:gap-2 lg:flex-wrap" id="category-grid"></div>
-                            </div>
-
-                            <!-- Desktop / Mobile Account & Budget -->
-                            <div class="space-y-2 md:space-y-1 md:pt-1 md:border-t md:border-slate-100">
-                                <div class="flex items-center justify-between">
-                                    <span class="max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[9px] font-bold uppercase tracking-wider text-slate-400">ช่องทางชำระเงิน</span>
-                                </div>
-                                <div class="w-full flex overflow-x-auto no-scrollbar snap-x gap-2 lg:flex-wrap lg:gap-3" id="account-grid"></div>
-                            </div>
-
-                            <div id="tx-budget-group-section" class="space-y-2 md:space-y-1 md:pt-1 md:border-t md:border-slate-100">
-                                <button id="tx-budget-summary-row" type="button" onclick="openBudgetSelectorModal()" class="w-full text-left max-md:bg-white max-md:rounded-xl max-md:p-4 max-md:shadow-sm md:bg-transparent md:p-0">
-                                    <div class="flex items-center justify-between">
-                                        <div class="space-y-0.5">
-                                            <span class="max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[9px] font-bold uppercase tracking-wider text-slate-400 block">กระเป๋าที่ต้องการใช้</span>
-                                            <span id="tx-budget-summary-text" class="md:hidden block text-xs font-medium text-slate-500">ยังไม่มีกระเป๋าให้เลือก</span>
-                                        </div>
-                                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 md:hidden"></i>
+                        <div id="tx-options-card" class="max-md:bg-transparent max-md:border-none max-md:p-0 md:bg-white rounded-2xl md:border md:border-slate-200 p-2.5 md:p-5 flex flex-col gap-4 md:gap-5 max-md:flex-1 md:flex-1 max-md:min-h-0 md:min-h-0 max-md:overflow-y-auto md:overflow-y-auto no-scrollbar">
+                            <div id="tx-form-body" class="flex flex-col gap-3.5 md:gap-4.5 lg:gap-5 flex-1 min-h-0">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ</span>
+                                    <div class="bg-slate-100 p-0.5 rounded-full flex w-28 shrink-0">
+                                        <button onclick="setType('spent')" id="tab-spent"
+                                            class="flex-1 py-1 text-[10px] font-bold rounded-full bg-white text-slate-800 shadow-sm cursor-pointer">รายจ่าย</button>
+                                        <button onclick="setType('income')" id="tab-income"
+                                            class="flex-1 py-1 text-[10px] font-bold rounded-full text-slate-400 cursor-pointer">รายรับ</button>
                                     </div>
-                                </button>
-                                <div class="hidden md:flex w-full overflow-x-auto no-scrollbar snap-x gap-2 lg:flex-wrap lg:gap-3" id="tx-budget-group-grid"></div>
+                                </div>
+
+                                <div id="tx-date-compact-row" class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 max-md:bg-white md:bg-slate-50 px-3 py-2 md:py-1.5 shadow-sm max-md:shadow-sm">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="calendar-days" class="w-4 h-4 text-slate-400"></i>
+                                        <span class="text-xs font-bold text-slate-700 max-md:text-sm">เลือกวันเวลา</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <input type="datetime-local" id="tx-date"
+                                            class="min-w-0 w-fit bg-transparent text-xs font-bold text-slate-800 outline-none text-right max-md:text-sm">
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center justify-between">
+                                        <span class="max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[10px] font-bold uppercase tracking-wider text-slate-400">หมวดหมู่</span>
+                                    </div>
+                                    <div class="w-full max-md:grid max-md:grid-cols-4 max-md:gap-2.5 md:flex md:overflow-x-auto md:no-scrollbar md:snap-x md:gap-2 lg:flex-wrap" id="category-grid"></div>
+                                </div>
+
+                                <!-- Desktop / Mobile Account & Budget -->
+                                <div class="space-y-1.5 md:space-y-2 md:pt-3.5 md:pb-1 md:border-t md:border-slate-100">
+                                    <div class="flex items-center justify-between">
+                                        <span class="max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[10px] font-bold uppercase tracking-wider text-slate-400">ช่องทางชำระเงิน</span>
+                                    </div>
+                                    <div class="w-full flex flex-wrap gap-2.5 md:gap-3 lg:gap-4 py-1" id="account-grid"></div>
+                                </div>
+
+                                <div id="tx-budget-group-section" class="space-y-1.5 md:space-y-2 md:pt-3.5 md:pb-1 md:border-t md:border-slate-100">
+                                    <!-- Mobile Title (Visible directly on mobile) -->
+                                    <span class="max-md:block hidden max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[10px] font-bold uppercase tracking-wider text-slate-400">กระเป๋าที่ต้องการใช้</span>
+
+                                    <button id="tx-budget-summary-row" type="button" onclick="openBudgetSelectorModal()" class="w-full text-left max-md:hidden md:bg-transparent md:p-0">
+                                        <div class="flex items-center justify-between">
+                                            <div class="space-y-0.5">
+                                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">กระเป๋าที่ต้องการใช้</span>
+                                                <span id="tx-budget-summary-text" class="md:hidden block text-xs font-medium text-slate-500">ยังไม่มีกระเป๋าให้เลือก</span>
+                                            </div>
+                                            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 md:hidden"></i>
+                                        </div>
+                                    </button>
+                                    <div class="w-full flex flex-wrap gap-2.5 md:gap-3 lg:gap-4 py-1" id="tx-budget-group-grid"></div>
+                                </div>
                             </div>
 
                             <button id="btn-save" onclick="saveTransaction()"
@@ -543,7 +548,7 @@
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
-            <div id="account-grid-modal" class="flex flex-wrap gap-2"></div>
+            <div id="account-grid-modal" class="flex flex-wrap gap-3"></div>
         </div>
     </div>
 
@@ -559,7 +564,7 @@
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
-            <div id="tx-budget-group-grid-modal" class="flex flex-wrap gap-2"></div>
+            <div id="tx-budget-group-grid-modal" class="flex flex-wrap gap-3"></div>
         </div>
     </div>
 

@@ -231,8 +231,9 @@ function updateCompactSelectionSummary() {
     if (accountLabel) setText(accountLabel, selectedAccount?.name || 'เลือกช่องทาง');
     if (budgetLabel) setText(budgetLabel, selectedGroup?.name || 'ไม่ใช้กระเป๋า');
 
-    if (budgetButton) {
-        budgetButton.classList.toggle('hidden', appState.currentType !== 'spent');
+    const budgetSection = document.getElementById('tx-budget-group-section');
+    if (budgetSection) {
+        budgetSection.classList.toggle('hidden', appState.currentType !== 'spent');
     }
 }
 
@@ -996,9 +997,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (displayInputEl) {
         displayInputEl.addEventListener('input', (e) => {
             let val = e.target.value.replace(/[^0-9.]/g, '');
+            val = val.replace(/^0+([0-9])/, '$1');
             const parts = val.split('.');
             if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
             if (val === '') val = '0';
+            e.target.value = val;
             uiState.expression = val;
             const displayEl = document.getElementById('display');
             if (displayEl) displayEl.innerText = uiState.expression;

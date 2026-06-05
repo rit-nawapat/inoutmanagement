@@ -100,7 +100,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /id="account-grid"/);
   assert.match(htmlSource, /id="tx-budget-group-grid"/);
   assert.match(htmlSource, /grid-cols-3/);
-  assert.match(htmlSource, /overflow-x-auto no-scrollbar snap-x gap-2/);
+  assert.match(htmlSource, /flex flex-wrap gap-/);
   assert.match(htmlSource, /id="tx-date-compact-row"/);
   assert.match(htmlSource, /id="mobile-app-shell"/);
   assert.match(htmlSource, /id="mobile-app-header"/);
@@ -141,7 +141,7 @@ test('mobile viewport CSS locks the add page to measured visual viewport height'
   assert.match(cssSource, /height:\s*var\(--mobile-save-height\)/);
   assert.match(cssSource, /flex:\s*0 0 var\(--mobile-save-height\)/);
   assert.match(cssSource, /body\.is-add-page #tx-options-card/);
-  assert.match(cssSource, /max-height:\s*var\(--add-options-height\)/);
+  assert.match(cssSource, /max-height:\s*none/);
   assert.match(cssSource, /#page-add/);
   assert.match(cssSource, /height:\s*var\(--add-content-height\)/);
   assert.match(cssSource, /#page-add\s+#?[^{}]*\{/);
