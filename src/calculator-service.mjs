@@ -95,7 +95,9 @@ export function handleCalculatorKeyboardInput(uiState, key) {
 export function pressClearAll(doc = globalThis.document) {
   clearCalculator(ctx.uiState);
   const display = doc.getElementById('display');
+  const displayInput = doc.getElementById('display-input');
   if (display) display.innerText = ctx.uiState.expression;
+  if (displayInput) displayInput.value = ctx.uiState.expression;
 
   resetCalculatorScanState(ctx.uiState);
   const noteEl = doc.getElementById('scanned-note');
@@ -109,28 +111,36 @@ export function pressClearAll(doc = globalThis.document) {
 export function pressQuickPrice(value, doc = globalThis.document) {
   quickPriceCalculator(ctx.uiState, value);
   const display = doc.getElementById('display');
+  const displayInput = doc.getElementById('display-input');
   if (display) display.innerText = ctx.uiState.expression;
+  if (displayInput) displayInput.value = ctx.uiState.expression;
   ctx.saveDraft();
 }
 
 export function pressKey(key, doc = globalThis.document) {
   inputDigitCalculator(ctx.uiState, key);
   const display = doc.getElementById('display');
+  const displayInput = doc.getElementById('display-input');
   if (display) display.innerText = ctx.uiState.expression;
+  if (displayInput) displayInput.value = ctx.uiState.expression;
   ctx.saveDraft();
 }
 
 export function pressOp(op, doc = globalThis.document) {
   inputOperatorCalculator(ctx.uiState, op);
   const display = doc.getElementById('display');
+  const displayInput = doc.getElementById('display-input');
   if (display) display.innerText = ctx.uiState.expression;
+  if (displayInput) displayInput.value = ctx.uiState.expression;
   ctx.saveDraft();
 }
 
 export function pressClear(doc = globalThis.document) {
   backspaceCalculator(ctx.uiState);
   const display = doc.getElementById('display');
+  const displayInput = doc.getElementById('display-input');
   if (display) display.innerText = ctx.uiState.expression;
+  if (displayInput) displayInput.value = ctx.uiState.expression;
 
   if (ctx.uiState.expression === '0') {
       resetCalculatorScanState(ctx.uiState);
@@ -147,10 +157,14 @@ export function calculate(doc = globalThis.document) {
   try {
       calculateCalculator(ctx.uiState);
       const display = doc.getElementById('display');
+      const displayInput = doc.getElementById('display-input');
       if (display) display.innerText = ctx.uiState.expression;
+      if (displayInput) displayInput.value = ctx.uiState.expression;
   } catch (e) {
       const display = doc.getElementById('display');
+      const displayInput = doc.getElementById('display-input');
       if (display) display.innerText = '0';
+      if (displayInput) displayInput.value = '0';
       ctx.uiState.expression = '0';
   }
   ctx.saveDraft();

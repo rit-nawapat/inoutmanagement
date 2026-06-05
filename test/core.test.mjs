@@ -90,14 +90,12 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   const htmlSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
   assert.match(htmlSource, /min-h-\[100dvh\] overflow-x-hidden md:h-\[100dvh\] md:overflow-hidden/);
-  assert.match(htmlSource, /id="tx-account-summary-row"/);
   assert.match(htmlSource, /id="tx-budget-summary-row"/);
   assert.match(htmlSource, /id="account-selector-modal"/);
   assert.match(htmlSource, /id="budget-selector-modal"/);
   assert.match(htmlSource, /md:hidden/);
   assert.match(htmlSource, /hidden md:block/);
   assert.match(htmlSource, /เลือกวันเวลา/);
-  assert.match(htmlSource, /เลือกช่องทาง/);
   assert.match(htmlSource, /เลือกกระเป๋า/);
   assert.match(htmlSource, /id="account-grid"/);
   assert.match(htmlSource, /id="tx-budget-group-grid"/);

@@ -74,7 +74,9 @@ export function processSlipOCR(fileInput, doc = globalThis.document, win = globa
           ctx.uiState.expression = detectedAmount.toString();
           
           const display = doc.getElementById('display');
+          const displayInput = doc.getElementById('display-input');
           if (display) display.innerText = ctx.uiState.expression;
+          if (displayInput) displayInput.value = ctx.uiState.expression;
 
           if (parsedDate) {
               const dateInput = doc.getElementById('tx-date');

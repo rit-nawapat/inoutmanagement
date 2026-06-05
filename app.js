@@ -796,6 +796,8 @@ function editTransaction(id) {
     
     const displayEl = document.getElementById('display');
     if (displayEl) displayEl.innerText = uiState.expression;
+    const displayInputEl = document.getElementById('display-input');
+    if (displayInputEl) displayInputEl.value = uiState.expression;
     
     uiState.currentSlipRefNo = tx.slipRefNo || "";
     document.getElementById('tx-date').value = draft.isoDate;
@@ -852,6 +854,8 @@ function triggerResetConfirm(type = 'all', id = null) {
         if (isConfirmed) {
             if (type === 'all') { 
                 appState.txHistory = []; uiState.expression = '0'; display.innerText = uiState.expression; 
+                const displayInput = document.getElementById('display-input');
+                if (displayInput) displayInput.value = uiState.expression; 
                 localStorage.setItem(getHistoryKey(), JSON.stringify(appState.txHistory)); 
                 updateDashboard(); if (appState.currentPage === 'history') renderHistory(); 
                 showToast('ล้างข้อมูลสำเร็จ', 'success'); 
@@ -865,6 +869,8 @@ function triggerResetConfirm(type = 'all', id = null) {
                 allBudgetGroups = [];
                 uiState.expression = '0';
                 display.innerText = uiState.expression;
+                const displayInput = document.getElementById('display-input');
+                if (displayInput) displayInput.value = uiState.expression;
                 updateDashboard();
                 showProfileSelection(); 
             }
@@ -923,6 +929,8 @@ function loadDraft() {
             // Re-render UI
             const displayEl = document.getElementById('display');
             if (displayEl) displayEl.innerText = uiState.expression;
+            const displayInputEl = document.getElementById('display-input');
+            if (displayInputEl) displayInputEl.value = uiState.expression;
             renderCategories();
             renderAccounts();
             selectBudgetGroup(uiState.selectedBudgetGroupId);
@@ -984,6 +992,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     switchPage('add');
     setupAutoSyncListeners();
     
+    const displayInputEl = document.getElementById('display-input');
+    if (displayInputEl) {
+        displayInputEl.addEventListener('input', (e) => {
+            let val = e.target.value.replace(/[^0-9.]/g, '');
+            const parts = val.split('.');
+            if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+            if (val === '') val = '0';
+            uiState.expression = val;
+            const displayEl = document.getElementById('display');
+            if (displayEl) displayEl.innerText = uiState.expression;
+            saveDraft();
+        });
+        displayInputEl.addEventListener('blur', (e) => {
+            if (uiState.expression.endsWith('.')) {
+                uiState.expression = uiState.expression.slice(0, -1);
+                e.target.value = uiState.expression;
+                const displayEl = document.getElementById('display');
+                if (displayEl) displayEl.innerText = uiState.expression;
+            }
+        });
+    }
+    
     // Auto sync on success
     stateStore.subscribe('sync:success', () => {
         syncDataFromSheet({ force: true });
@@ -1022,6 +1052,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             const displayEl = document.getElementById('display');
             if (displayEl) displayEl.innerText = uiState.expression;
+            const displayInputEl = document.getElementById('display-input');
+            if (displayInputEl) displayInputEl.value = uiState.expression;
             saveDraft();
         }
     });

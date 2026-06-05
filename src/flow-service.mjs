@@ -222,6 +222,8 @@ export async function saveTransactionFlow({
     uiState.currentSlipRefNo = '';
     uiState.selectedBudgetGroupId = '';
     display.innerText = uiState.expression;
+    const displayInput = globalThis.document ? globalThis.document.getElementById('display-input') : null;
+    if (displayInput) displayInput.value = uiState.expression;
     document.getElementById('scanned-note').classList.add('hidden');
     uiState.editModeId = null;
     setLocalDatetime();
