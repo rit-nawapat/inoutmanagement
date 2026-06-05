@@ -107,6 +107,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /id="category-grid-scroll"/);
   assert.match(htmlSource, /id="account-grid-scroll"/);
   assert.match(htmlSource, /id="tx-budget-group-grid-scroll"/);
+  assert.match(htmlSource, /option-block-stretch/);
   assert.match(
     htmlSource,
     /<[^>]*(?:id="(?:category-grid-scroll|account-grid-scroll|tx-budget-group-grid-scroll)"[^>]*class="[^"]*\bmobile-option-scroll\b[^"]*\bno-scrollbar\b[^"]*"|class="[^"]*\bmobile-option-scroll\b[^"]*\bno-scrollbar\b[^"]*"[^>]*id="(?:category-grid-scroll|account-grid-scroll|tx-budget-group-grid-scroll)")[^>]*>/
@@ -157,6 +158,8 @@ test('mobile viewport CSS locks the add page to measured visual viewport height'
   assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*overflow-y:\s*auto/);
   assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*-webkit-overflow-scrolling:\s*touch/);
   assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*min-height:\s*0/);
+  assert.match(cssSource, /\.option-block\s*\{[\s\S]*display:\s*flex/);
+  assert.match(cssSource, /\.option-block-stretch\s*\{[\s\S]*flex:\s*1 1 0/);
   assert.match(cssSource, /#category-grid-scroll/);
   assert.match(cssSource, /#account-grid-scroll/);
   assert.match(cssSource, /#tx-budget-group-grid-scroll/);
