@@ -107,12 +107,9 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /id="category-grid-scroll"/);
   assert.match(htmlSource, /id="account-grid-scroll"/);
   assert.match(htmlSource, /id="tx-budget-group-grid-scroll"/);
-  assert.match(htmlSource, /option-block-stretch/);
   assert.match(htmlSource, /id="category-grid-scroll" class="no-scrollbar"/);
-  assert.match(
-    htmlSource,
-    /<[^>]*(?:id="(?:account-grid-scroll|tx-budget-group-grid-scroll)"[^>]*class="[^"]*\bmobile-option-scroll\b[^"]*\bno-scrollbar\b[^"]*"|class="[^"]*\bmobile-option-scroll\b[^"]*\bno-scrollbar\b[^"]*"[^>]*id="(?:account-grid-scroll|tx-budget-group-grid-scroll)")[^>]*>/
-  );
+  assert.match(htmlSource, /id="account-grid-scroll" class="no-scrollbar"/);
+  assert.match(htmlSource, /id="tx-budget-group-grid-scroll" class="no-scrollbar"/);
   assert.match(htmlSource, /min-h-\[38px\]/);
   assert.doesNotMatch(htmlSource, /id="tab-acc-money"/);
   assert.doesNotMatch(htmlSource, /ข้อมูลประกอบรายการ/);
@@ -156,16 +153,15 @@ test('mobile viewport CSS locks the add page to measured visual viewport height'
   assert.match(cssSource, /#page-add\s+#?[^{}]*\{/);
   assert.match(cssSource, /#tx-form-body\s*\{[^}]*overflow:\s*visible/);
   assert.doesNotMatch(cssSource, /#tx-form-body\s*\{[^}]*overflow-y:\s*auto/);
-  assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*overflow-y:\s*auto/);
-  assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*-webkit-overflow-scrolling:\s*touch/);
-  assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*min-height:\s*0/);
   assert.match(cssSource, /\.option-block\s*\{[\s\S]*display:\s*flex/);
-  assert.match(cssSource, /\.option-block-stretch\s*\{[\s\S]*flex:\s*1 1 0/);
   assert.match(cssSource, /#category-grid-scroll/);
   assert.match(cssSource, /#account-grid-scroll/);
   assert.match(cssSource, /#tx-budget-group-grid-scroll/);
   assert.match(cssSource, /body\.is-add-page #category-grid-scroll\s*\{[\s\S]*max-height:\s*none/);
   assert.doesNotMatch(cssSource, /body\.is-add-page #category-grid-scroll\s*\{[\s\S]*overflow-y:\s*auto/);
+  assert.match(cssSource, /body\.is-add-page #account-grid-scroll,\s*body\.is-add-page #tx-budget-group-grid-scroll\s*\{[\s\S]*max-height:\s*none/);
+  assert.doesNotMatch(cssSource, /body\.is-add-page #account-grid-scroll[\s\S]*overflow-y:\s*auto/);
+  assert.doesNotMatch(cssSource, /body\.is-add-page #tx-budget-group-grid-scroll[\s\S]*overflow-y:\s*auto/);
 });
 
 test('desktop add page uses a dedicated two-column layout', () => {

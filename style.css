@@ -155,22 +155,6 @@ body {
     gap: 0.375rem;
   }
 
-  .option-block-stretch {
-    flex: 1 1 0;
-  }
-
-  .mobile-option-scroll {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: visible;
-  }
-
-  body.is-add-page .mobile-option-scroll {
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
   body.is-add-page #category-grid-scroll {
     flex: 0 0 auto;
     max-height: none;
@@ -179,9 +163,10 @@ body {
 
   body.is-add-page #account-grid-scroll,
   body.is-add-page #tx-budget-group-grid-scroll {
-    flex: 1 1 auto;
-    min-height: clamp(88px, 14vh, 120px);
-    max-height: clamp(92px, 20vh, 180px);
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
   }
 
   #category-grid {
