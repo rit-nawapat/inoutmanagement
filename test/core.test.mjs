@@ -167,8 +167,14 @@ test('mobile add page uses one scroll container with a fixed bottom save action'
   assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*right:\s*0\.75rem/);
   assert.match(cssSource, /height:\s*var\(--mobile-save-height\)/);
   assert.match(cssSource, /flex:\s*0 0 var\(--mobile-save-height\)/);
-  assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*box-shadow:\s*0 0 0 0\.375rem #ffffff,\s*0 12px 24px rgba\(15, 23, 42, 0\.16\)/);
-  assert.doesNotMatch(cssSource, /body\.is-add-page #btn-save::before/);
+  assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*box-shadow:\s*0 12px 24px rgba\(15, 23, 42, 0\.16\)/);
+  assert.match(cssSource, /#main-touch-zone\s*\{[\s\S]*position:\s*relative/);
+  assert.match(cssSource, /body\.is-add-page #main-touch-zone::after\s*\{[\s\S]*content:\s*""/);
+  assert.match(cssSource, /body\.is-add-page #main-touch-zone::after\s*\{[\s\S]*background:\s*#ffffff/);
+  assert.match(cssSource, /body\.is-add-page #main-touch-zone::after\s*\{[\s\S]*left:\s*0/);
+  assert.match(cssSource, /body\.is-add-page #main-touch-zone::after\s*\{[\s\S]*right:\s*0/);
+  assert.match(cssSource, /body\.is-add-page #main-touch-zone::after\s*\{[\s\S]*bottom:\s*var\(--mobile-nav-height\)/);
+  assert.match(cssSource, /body\.is-add-page #main-touch-zone::after\s*\{[\s\S]*pointer-events:\s*none/);
   assert.match(cssSource, /body\.is-add-page #tx-options-card/);
   assert.match(cssSource, /max-height:\s*none/);
   assert.match(cssSource, /body\.is-add-page #tx-options-card\s*\{[\s\S]*overflow:\s*visible/);

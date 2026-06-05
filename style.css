@@ -55,6 +55,7 @@ body {
   }
 
   #main-touch-zone {
+    position: relative;
     height: var(--app-height);
     min-height: 0;
     padding-bottom: 0 !important;
@@ -197,7 +198,20 @@ body {
     margin-top: 0 !important;
     margin-bottom: 0 !important;
     border-radius: 0.875rem;
-    box-shadow: 0 0 0 0.375rem #ffffff, 0 12px 24px rgba(15, 23, 42, 0.16);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
+  }
+
+  body.is-add-page #main-touch-zone::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: var(--mobile-nav-height);
+    height: calc(var(--mobile-save-height) + env(safe-area-inset-bottom, 0px) + 1.25rem);
+    background: #ffffff;
+    box-shadow: 0 -6px 20px rgba(255, 255, 255, 0.92);
+    pointer-events: none;
+    z-index: 35;
   }
 
   #tx-date-compact-row {
