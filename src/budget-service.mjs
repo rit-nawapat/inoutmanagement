@@ -245,12 +245,12 @@ export function renderBudgetSelector({
   const allChip = createEl('div', { className: 'flex-shrink-0 snap-start' });
   allChip.onclick = () => onSelect?.('');
   const allPill = createEl('div', {
-    className: `flex items-center space-x-1.5 max-md:py-1 max-md:px-2 md:py-2 md:px-3.5 max-md:rounded-xl md:rounded-xl text-[10px] md:text-[10px] lg:text-xs lg:py-2.5 lg:px-4.5 font-bold border transition-colors cursor-pointer ${noGroupSelected
-        ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
-        : 'bg-white max-md:border-slate-100 md:border-slate-200 text-slate-500 hover:bg-slate-50 max-md:shadow-sm'
+    className: `flex items-center justify-center space-x-2 max-md:py-3.5 max-md:px-4 md:py-2 md:px-3.5 max-md:rounded-2xl md:rounded-xl text-[10px] max-md:text-xs lg:text-xs lg:py-2.5 lg:px-4.5 font-bold border transition-colors cursor-pointer ${noGroupSelected
+        ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+        : 'bg-white max-md:border-slate-200 md:border-slate-200 text-slate-500 hover:bg-slate-50 max-md:shadow-sm'
       }`,
   });
-  allPill.appendChild(createIcon('wallet', 'max-md:w-3.5 max-md:h-3.5 md:w-3.5 md:h-3.5'));
+  allPill.appendChild(createIcon('wallet', 'max-md:w-4 max-md:h-4 md:w-3.5 md:h-3.5'));
   allPill.appendChild(createEl('span', { text: 'ไม่ใช้กระเป๋า' }));
   allChip.appendChild(allPill);
   container.appendChild(allChip);
@@ -264,14 +264,14 @@ export function renderBudgetSelector({
     chip.onclick = () => onSelect?.(group.id.toString());
 
     const pill = createEl('div', {
-      className: `flex items-center space-x-1.5 max-md:py-1 max-md:px-2 md:py-2 md:px-3.5 max-md:rounded-xl md:rounded-xl text-[10px] md:text-[10px] lg:text-xs lg:py-2.5 lg:px-4.5 font-bold border transition-all cursor-pointer ${isSelected
-          ? `${gColor.fill.split(' ')[0]} border-transparent text-white shadow-sm scale-105`
-          : `bg-white max-md:border-slate-100 md:border-slate-200 text-slate-600 hover:bg-slate-50 max-md:shadow-sm`
+      className: `flex items-center justify-center space-x-2 max-md:py-3.5 max-md:px-4 md:py-2 md:px-3.5 max-md:rounded-2xl md:rounded-xl text-[10px] max-md:text-xs lg:text-xs lg:py-2.5 lg:px-4.5 font-bold border transition-all cursor-pointer ${isSelected
+          ? `${gColor.fill.split(' ')[0]} border-transparent text-white shadow-md scale-105`
+          : `bg-white max-md:border-slate-200 md:border-slate-200 text-slate-600 hover:bg-slate-50 max-md:shadow-sm`
         }`,
     });
 
     const prefix = isChild ? '└ ' : '';
-    pill.appendChild(createIcon(isChild ? 'chevron-right' : 'folder', 'max-md:w-3.5 max-md:h-3.5 md:w-3 md:h-3 opacity-80'));
+    pill.appendChild(createIcon(isChild ? 'chevron-right' : 'folder', 'max-md:w-4 max-md:h-4 md:w-3 md:h-3 opacity-80'));
     pill.appendChild(createEl('span', { text: `${prefix}${group.name} (฿${group.remaining.toLocaleString()})` }));
     chip.appendChild(pill);
     container.appendChild(chip);

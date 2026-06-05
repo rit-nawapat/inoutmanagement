@@ -513,7 +513,11 @@ uiState.selectedAccount = accounts[0].id;
 function setLocalDatetime() {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('tx-date').value = now.toISOString().slice(0, 16);
+    const txDate = document.getElementById('tx-date');
+    if (txDate) {
+        txDate.value = now.toISOString().slice(0, 16);
+        txDate.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 }
 
 let touchStartX = 0, touchEndX = 0;
@@ -801,7 +805,11 @@ function editTransaction(id) {
     if (displayInputEl) displayInputEl.value = uiState.expression;
     
     uiState.currentSlipRefNo = tx.slipRefNo || "";
-    document.getElementById('tx-date').value = draft.isoDate;
+    const txDate = document.getElementById('tx-date');
+    if (txDate) {
+        txDate.value = draft.isoDate;
+        txDate.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     
     if (tx.budgetGroupId) {
         selectBudgetGroup(tx.budgetGroupId);
@@ -923,8 +931,10 @@ function loadDraft() {
             uiState.selectedBudgetGroupId = draft.selectedBudgetGroupId || '';
             uiState.currentSlipRefNo = draft.currentSlipRefNo || '';
             uiState.currentScannedBarcode = draft.currentScannedBarcode || '';
-            if (draft.txDate && document.getElementById('tx-date')) {
-                document.getElementById('tx-date').value = draft.txDate;
+            const txDate = document.getElementById('tx-date');
+            if (draft.txDate && txDate) {
+                txDate.value = draft.txDate;
+                txDate.dispatchEvent(new Event('change', { bubbles: true }));
             }
             
             // Re-render UI
@@ -986,6 +996,46 @@ const display = document.getElementById('display');
 document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
     setupViewportMetricListeners();
+    
+    const txDate = document.getElementById('tx-date');
+    if (txDate) {
+        const updateMobileDateText = () => {
+            const val = txDate.value;
+            if (!val) return;
+            const d = new Date(val);
+            if (isNaN(d.getTime())) return;
+            
+            const now = new Date();
+            const todayStr = now.toDateString();
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            const yesterdayStr = yesterday.toDateString();
+            
+            const dayNames = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+            const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            
+            let dateText = '';
+            if (d.toDateString() === todayStr) {
+                dateText = 'วันนี้';
+            } else if (d.toDateString() === yesterdayStr) {
+                dateText = 'เมื่อวาน';
+            } else {
+                dateText = `${dayNames[d.getDay()]} ${d.getDate()} ${monthNames[d.getMonth()]}`;
+            }
+            
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            
+            const mobileDateTextEl = document.getElementById('selected-date-text-mobile');
+            if (mobileDateTextEl) {
+                mobileDateTextEl.innerText = `${dateText} ${hours}:${minutes}`;
+            }
+        };
+        txDate.addEventListener('input', updateMobileDateText);
+        txDate.addEventListener('change', updateMobileDateText);
+        updateMobileDateText();
+    }
+
     setLocalDatetime();
     renderCategories();
     renderAccounts();
@@ -1128,3 +1178,211 @@ window.submitDebtPayment = submitDebtPayment;
 window.openDebtAdjustmentModal = openDebtAdjustmentModal;
 window.closeDebtAdjustmentModal = closeDebtAdjustmentModal;
 window.submitDebtAdjustment = submitDebtAdjustment;
+
+let pickerDates = [];
+
+function openCupertinoDatePicker() {
+    const txDate = document.getElementById('tx-date');
+    if (!txDate) return;
+    
+    const currentVal = txDate.value;
+    const date = currentVal ? new Date(currentVal) : new Date();
+    
+    const modal = document.getElementById('cupertino-datepicker-modal');
+    const panel = document.getElementById('cupertino-datepicker-panel');
+    if (modal && panel) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modal.offsetHeight; // force reflow
+        modal.classList.remove('opacity-0');
+        panel.classList.remove('translate-y-full');
+    }
+    
+    initCupertinoPickerWheels(date);
+}
+
+function initCupertinoPickerWheels(currentDate) {
+    const wheelDate = document.getElementById('wheel-date');
+    const wheelHour = document.getElementById('wheel-hour');
+    const wheelMinute = document.getElementById('wheel-minute');
+    const wheelAmpm = document.getElementById('wheel-ampm');
+    
+    if (!wheelDate || !wheelHour || !wheelMinute || !wheelAmpm) return;
+    
+    wheelDate.innerHTML = '';
+    pickerDates = [];
+    
+    const now = new Date();
+    const todayStr = now.toDateString();
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+    
+    const dayNames = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+    const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    
+    let activeDateIndex = 0;
+    
+    for (let i = -60; i <= 7; i++) {
+        const d = new Date();
+        d.setDate(now.getDate() + i);
+        pickerDates.push(d);
+        
+        let text = '';
+        if (d.toDateString() === todayStr) {
+            text = 'วันนี้';
+        } else if (d.toDateString() === yesterdayStr) {
+            text = 'เมื่อวาน';
+        } else {
+            text = `${dayNames[d.getDay()]} ${d.getDate()} ${monthNames[d.getMonth()]}`;
+        }
+        
+        const el = document.createElement('div');
+        el.className = 'h-[44px] flex items-center justify-center snap-center shrink-0 transition-all duration-100';
+        el.innerText = text;
+        wheelDate.appendChild(el);
+        
+        if (d.getDate() === currentDate.getDate() && 
+            d.getMonth() === currentDate.getMonth() && 
+            d.getFullYear() === currentDate.getFullYear()) {
+            activeDateIndex = pickerDates.length - 1;
+        }
+    }
+    
+    wheelHour.innerHTML = '';
+    const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+    hours.forEach(h => {
+        const el = document.createElement('div');
+        el.className = 'h-[44px] flex items-center justify-center snap-center shrink-0 transition-all duration-100';
+        el.innerText = h;
+        wheelHour.appendChild(el);
+    });
+    
+    let currentHour24 = currentDate.getHours();
+    let isPM = currentHour24 >= 12;
+    let currentHour12 = currentHour24 % 12;
+    if (currentHour12 === 0) currentHour12 = 12;
+    let activeHourIndex = currentHour12 - 1;
+    let activeAmpmIndex = isPM ? 1 : 0;
+    
+    wheelMinute.innerHTML = '';
+    const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+    minutes.forEach(m => {
+        const el = document.createElement('div');
+        el.className = 'h-[44px] flex items-center justify-center snap-center shrink-0 transition-all duration-100';
+        el.innerText = m;
+        wheelMinute.appendChild(el);
+    });
+    let activeMinuteIndex = currentDate.getMinutes();
+    
+    wheelAmpm.innerHTML = '';
+    ['AM', 'PM'].forEach(ap => {
+        const el = document.createElement('div');
+        el.className = 'h-[44px] flex items-center justify-center snap-center shrink-0 transition-all duration-100';
+        el.innerText = ap;
+        wheelAmpm.appendChild(el);
+    });
+    
+    setupWheelScroll([wheelDate, wheelHour, wheelMinute, wheelAmpm], 
+                     [activeDateIndex, activeHourIndex, activeMinuteIndex, activeAmpmIndex]);
+}
+
+function setupWheelScroll(columns, activeIndices) {
+    columns.forEach((col, idx) => {
+        col.onscroll = () => {
+            const scrollTop = col.scrollTop;
+            const selectedIndex = Math.round(scrollTop / 44);
+            const items = col.children;
+            for (let i = 0; i < items.length; i++) {
+                const distance = Math.abs(i - selectedIndex);
+                if (distance === 0) {
+                    items[i].style.opacity = '1';
+                    items[i].style.fontWeight = '700';
+                    items[i].style.transform = 'scale(1.08)';
+                } else if (distance === 1) {
+                    items[i].style.opacity = '0.55';
+                    items[i].style.fontWeight = '500';
+                    items[i].style.transform = 'scale(0.96)';
+                } else if (distance === 2) {
+                    items[i].style.opacity = '0.25';
+                    items[i].style.fontWeight = '400';
+                    items[i].style.transform = 'scale(0.88)';
+                } else {
+                    items[i].style.opacity = '0.1';
+                    items[i].style.fontWeight = '400';
+                    items[i].style.transform = 'scale(0.8)';
+                }
+            }
+        };
+        
+        setTimeout(() => {
+            col.scrollTop = activeIndices[idx] * 44;
+            col.onscroll();
+        }, 100);
+    });
+}
+
+function closeCupertinoDatePicker(saveChanges = false) {
+    if (saveChanges) {
+        const wheelDate = document.getElementById('wheel-date');
+        const wheelHour = document.getElementById('wheel-hour');
+        const wheelMinute = document.getElementById('wheel-minute');
+        const wheelAmpm = document.getElementById('wheel-ampm');
+        
+        if (wheelDate && wheelHour && wheelMinute && wheelAmpm) {
+            const dateIdx = Math.round(wheelDate.scrollTop / 44);
+            const hourIdx = Math.round(wheelHour.scrollTop / 44);
+            const minuteIdx = Math.round(wheelMinute.scrollTop / 44);
+            const ampmIdx = Math.round(wheelAmpm.scrollTop / 44);
+            
+            const selectedDate = pickerDates[dateIdx] || new Date();
+            const selectedHour12 = hourIdx + 1;
+            const selectedMinute = minuteIdx;
+            const isPM = ampmIdx === 1;
+            
+            let selectedHour24 = selectedHour12;
+            if (isPM) {
+                if (selectedHour12 < 12) selectedHour24 += 12;
+            } else {
+                if (selectedHour12 === 12) selectedHour24 = 0;
+            }
+            
+            const finalDate = new Date(selectedDate);
+            finalDate.setHours(selectedHour24);
+            finalDate.setMinutes(selectedMinute);
+            
+            const year = finalDate.getFullYear();
+            const month = String(finalDate.getMonth() + 1).padStart(2, '0');
+            const day = String(finalDate.getDate()).padStart(2, '0');
+            const hours = String(finalDate.getHours()).padStart(2, '0');
+            const minutes = String(finalDate.getMinutes()).padStart(2, '0');
+            
+            const txDate = document.getElementById('tx-date');
+            if (txDate) {
+                txDate.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                txDate.dispatchEvent(new Event('input', { bubbles: true }));
+                txDate.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    }
+    
+    const modal = document.getElementById('cupertino-datepicker-modal');
+    const panel = document.getElementById('cupertino-datepicker-panel');
+    if (modal && panel) {
+        modal.classList.add('opacity-0');
+        panel.classList.add('translate-y-full');
+        setTimeout(() => {
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }, 300);
+    }
+}
+
+function triggerDatePicker() {
+    openCupertinoDatePicker();
+}
+
+window.triggerDatePicker = triggerDatePicker;
+window.closeCupertinoDatePicker = closeCupertinoDatePicker;
+

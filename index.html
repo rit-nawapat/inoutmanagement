@@ -317,7 +317,14 @@
                         <div id="tx-options-card" class="max-md:bg-transparent max-md:border-none max-md:p-0 md:bg-white rounded-2xl md:border md:border-slate-200 p-2.5 md:p-5 flex flex-col gap-4 md:gap-5 max-md:flex-1 md:flex-1 max-md:min-h-0 md:min-h-0 max-md:overflow-y-auto md:overflow-y-auto no-scrollbar">
                             <div id="tx-form-body" class="flex flex-col gap-2 md:gap-4.5 lg:gap-5 flex-none">
                                 <div class="flex items-center justify-between gap-3">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ</span>
+                                        <!-- Compact mobile date button trigger -->
+                                        <button id="btn-date-trigger" onclick="triggerDatePicker()" type="button" class="md:hidden flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-full active:scale-95 transition-all shadow-sm cursor-pointer">
+                                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-indigo-600"></i>
+                                            <span id="selected-date-text-mobile" class="text-[10px] font-bold text-slate-700"></span>
+                                        </button>
+                                    </div>
                                     <div class="bg-slate-100 p-0.5 rounded-full flex w-28 shrink-0">
                                         <button onclick="setType('spent')" id="tab-spent"
                                             class="flex-1 py-1 text-[10px] font-bold rounded-full bg-white text-slate-800 shadow-sm cursor-pointer">รายจ่าย</button>
@@ -349,7 +356,7 @@
                                     <div class="flex items-center justify-between">
                                         <span class="max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[10px] font-bold uppercase tracking-wider text-slate-400">ช่องทางชำระเงิน</span>
                                     </div>
-                                    <div class="w-full flex flex-wrap gap-2 max-md:gap-1.5 md:gap-3 lg:gap-4 py-0.5" id="account-grid"></div>
+                                    <div class="w-full max-md:grid max-md:grid-cols-2 max-md:gap-2.5 md:flex md:flex-wrap md:gap-3 lg:gap-4 py-0.5" id="account-grid"></div>
                                 </div>
  
                                 <div id="tx-budget-group-section" class="space-y-1.5 md:space-y-2 md:pt-3.5 md:pb-1 md:border-t md:border-slate-100">
@@ -365,7 +372,7 @@
                                             <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 md:hidden"></i>
                                         </div>
                                     </button>
-                                    <div class="w-full flex flex-wrap gap-2 max-md:gap-1.5 md:gap-3 lg:gap-4 py-0.5" id="tx-budget-group-grid"></div>
+                                    <div class="w-full max-md:grid max-md:grid-cols-2 max-md:gap-2.5 md:flex md:flex-wrap md:gap-3 lg:gap-4 py-0.5" id="tx-budget-group-grid"></div>
                                 </div>
                             </div>
 
@@ -783,6 +790,39 @@
                     <i data-lucide="send" class="w-4 h-4"></i>
                     <span>บันทึกรายจ่าย</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cupertino Bottom Scroll DatePicker Modal -->
+    <div id="cupertino-datepicker-modal" onclick="if (event.target === this) closeCupertinoDatePicker(false);" class="fixed inset-0 bg-slate-900/60 z-[200] hidden items-end justify-center transition-opacity opacity-0 duration-300">
+        <div class="bg-white w-full max-w-md rounded-t-[2rem] shadow-2xl flex flex-col translate-y-full transition-transform duration-300 overflow-hidden pb-safe" id="cupertino-datepicker-panel" onclick="event.stopPropagation();">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+                <button type="button" onclick="closeCupertinoDatePicker(false)" class="text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer">ยกเลิก</button>
+                <span class="text-sm font-bold text-slate-800">เลือกวันเวลา</span>
+                <button type="button" onclick="closeCupertinoDatePicker(true)" class="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer">ตกลง</button>
+            </div>
+            <!-- Wheel Picker Panel -->
+            <div class="relative h-[240px] bg-white flex justify-center items-center py-2 px-4 select-none shrink-0 overflow-hidden">
+                <!-- Selection Highlight Overlay (The middle selected row) -->
+                <div class="absolute left-4 right-4 h-[44px] border-t border-b border-slate-200/80 pointer-events-none z-10"></div>
+                
+                <!-- Fade Gradients at Top/Bottom -->
+                <div class="absolute inset-x-0 top-0 h-[88px] bg-gradient-to-b from-white via-white/80 to-transparent pointer-events-none z-10"></div>
+                <div class="absolute inset-x-0 bottom-0 h-[88px] bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none z-10"></div>
+
+                <!-- Columns Container -->
+                <div class="flex w-full h-[220px] justify-between relative text-slate-800 text-[15px] md:text-base font-semibold">
+                    <!-- Date Column -->
+                    <div id="wheel-date" class="flex-[2] h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar text-center flex flex-col py-[88px]"></div>
+                    <!-- Hour Column -->
+                    <div id="wheel-hour" class="flex-1 h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar text-center flex flex-col py-[88px]"></div>
+                    <!-- Minute Column -->
+                    <div id="wheel-minute" class="flex-1 h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar text-center flex flex-col py-[88px]"></div>
+                    <!-- AM/PM Column -->
+                    <div id="wheel-ampm" class="flex-1 h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar text-center flex flex-col py-[88px]"></div>
+                </div>
             </div>
         </div>
     </div>

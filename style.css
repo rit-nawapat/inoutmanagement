@@ -165,42 +165,43 @@ body {
     border-radius: 0.875rem;
   }
 
-  /* Tall screens spacing optimization (Viewport height >= 780px) */
-  @media (min-height: 780px) {
-    body.is-add-page #tx-options-card {
-      padding: 0.95rem 0.95rem !important;
-      gap: 1.1rem !important;
-    }
-
-    #tx-form-body {
-      gap: 1.1rem !important;
-    }
-
-    #category-grid {
-      gap: 0.5rem !important;
-    }
-
-    #account-grid,
-    #tx-budget-group-grid {
-      gap: 0.5rem !important;
-    }
-
-    /* Expand pill paddings on taller screen heights to occupy space naturally */
-    #account-grid > div > div,
-    #tx-budget-group-grid > div > div {
-      padding-top: 0.45rem !important;
-      padding-bottom: 0.45rem !important;
-      padding-left: 0.75rem !important;
-      padding-right: 0.75rem !important;
-    }
-
-    #category-grid > div {
-      padding-top: 0.25rem !important;
-      padding-bottom: 0.25rem !important;
-      min-width: 62px !important;
-    }
+  #tx-date-compact-row {
+    position: absolute !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
   }
 }
+
+.btn-key,
+.btn-op,
+.btn-quick-price {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.btn-key,
+.btn-op {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+.btn-op {
+  background-color: #f8fafc;
+  color: #475569;
+}
+
+.btn-key:active,
 
 .btn-key,
 .btn-op,
@@ -249,4 +250,11 @@ body {
   .top-safe {
     margin-top: env(safe-area-inset-top);
   }
+}
+
+#cupertino-datepicker-modal {
+  transition: opacity 0.25s ease-out;
+}
+#cupertino-datepicker-panel {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
