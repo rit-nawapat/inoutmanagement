@@ -106,6 +106,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /id="tx-date-compact-row"/);
   assert.match(htmlSource, /id="mobile-app-shell"/);
   assert.match(htmlSource, /id="mobile-app-header"/);
+  assert.match(htmlSource, /min-h-\[38px\]/);
   assert.doesNotMatch(htmlSource, /id="tab-acc-money"/);
   assert.doesNotMatch(htmlSource, /ข้อมูลประกอบรายการ/);
   assert.doesNotMatch(htmlSource, /id="ocr-file-input"/);
@@ -135,8 +136,16 @@ test('mobile viewport CSS locks the add page to measured visual viewport height'
   assert.match(cssSource, /height:\s*var\(--content-height\)/);
   assert.match(cssSource, /body\.is-add-page #main-content-scroll/);
   assert.match(cssSource, /body:not\(\.is-add-page\) #main-content-scroll/);
+  assert.match(cssSource, /--mobile-save-height:\s*48px/);
+  assert.match(cssSource, /--add-content-height/);
+  assert.match(cssSource, /body\.is-add-page #btn-save/);
+  assert.doesNotMatch(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*position:\s*fixed/);
+  assert.match(cssSource, /height:\s*var\(--mobile-save-height\)/);
+  assert.match(cssSource, /flex:\s*0 0 var\(--mobile-save-height\)/);
+  assert.match(cssSource, /body\.is-add-page #tx-options-card/);
+  assert.match(cssSource, /max-height:\s*var\(--add-options-height\)/);
   assert.match(cssSource, /#page-add/);
-  assert.match(cssSource, /height:\s*100%/);
+  assert.match(cssSource, /height:\s*var\(--add-content-height\)/);
   assert.match(cssSource, /#page-add\s+#?[^{}]*\{/);
 });
 
@@ -145,7 +154,6 @@ test('desktop add page uses a dedicated two-column layout', () => {
 
   assert.match(htmlSource, /lg:grid lg:grid-cols-\[minmax\(380px,440px\)_minmax\(0,1fr\)\]/);
   assert.match(htmlSource, /lg:sticky lg:top-0/);
-  assert.match(htmlSource, /lg:min-h-\[420px\]/);
   assert.match(htmlSource, /lg:flex-wrap/);
 });
 

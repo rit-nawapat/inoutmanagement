@@ -259,13 +259,13 @@
 
                 <section id="page-add" class="hidden flex-col w-full max-w-6xl mx-auto flex-1 min-h-0 overflow-hidden pb-1 lg:pb-6">
                     <div class="flex flex-col gap-1.5 lg:gap-6 flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(380px,440px)_minmax(0,1fr)] lg:items-start">
-                        <div id="tx-calculator-column" class="space-y-2 lg:space-y-3 lg:sticky lg:top-0">
-                        <div class="bg-white rounded-2xl border border-slate-200 px-3 py-2 lg:px-5 lg:py-4">
+                        <div id="tx-calculator-column" class="flex flex-col gap-1.5 lg:gap-3 lg:sticky lg:top-0 flex-1 min-h-0">
+                        <div class="bg-white rounded-2xl border border-slate-200 px-2.5 py-1.5 lg:px-5 lg:py-4 shrink-0">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">ยอดที่ต้องการบันทึก</span>
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">ยอดที่ต้องการบันทึก</span>
                                     <div id="display"
-                                        class="text-[30px] leading-none lg:text-5xl font-extrabold text-slate-800 tracking-tight truncate mt-0.5">
+                                        class="text-[28px] leading-none lg:text-5xl font-extrabold text-slate-800 tracking-tight truncate mt-0.5">
                                         0</div>
                                 </div>
                                 <div class="bg-slate-50 text-slate-300 rounded-xl p-1.5 shrink-0"><i data-lucide="calculator" class="w-4 h-4"></i></div>
@@ -275,12 +275,11 @@
                             </div>
                         </div>
 
-                        <div class="bg-white rounded-2xl border border-slate-200 p-2 lg:p-4 space-y-2 flex-1 min-h-0">
-                            <div class="space-y-2 pt-1 border-t-0 lg:pt-0 lg:border-t-0 flex-1 min-h-0">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน</span>
-                                </div>
-                                <div class="grid grid-cols-3 gap-1.5 lg:gap-2">
+                        <div class="bg-white rounded-2xl border border-slate-200 p-1.5 lg:p-4 flex flex-col gap-1.5 flex-1 min-h-0">
+                            <div class="flex items-center justify-between shrink-0">
+                                <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-1.5 lg:gap-2 shrink-0">
                                     <button onclick="pressClearAll()"
                                         class="btn-quick-price !bg-rose-50 !text-rose-600 !border-rose-200 py-1.5 lg:py-2 text-[11px]">ล้าง</button>
                                     <button onclick="pressQuickPrice(20)"
@@ -289,29 +288,29 @@
                                         class="btn-quick-price py-1.5 lg:py-2 text-[11px]">+100</button>
                                 </div>
 
-                                <div class="grid grid-cols-4 gap-1.5 lg:gap-3 text-base font-bold text-slate-800 flex-1 min-h-[196px] lg:min-h-[420px] auto-rows-fr">
-                                    <button onclick="pressKey('1')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">1</button>
-                                    <button onclick="pressKey('2')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">2</button>
-                                    <button onclick="pressKey('3')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">3</button>
-                                    <button onclick="pressOp('+')" class="btn-op min-h-[44px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="plus" class="w-4 h-4 mx-auto"></i></button>
-                                    <button onclick="pressKey('4')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">4</button>
-                                    <button onclick="pressKey('5')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">5</button>
-                                    <button onclick="pressKey('6')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">6</button>
-                                    <button onclick="pressOp('-')" class="btn-op min-h-[44px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="minus" class="w-4 h-4 mx-auto"></i></button>
-                                    <button onclick="pressKey('7')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">7</button>
-                                    <button onclick="pressKey('8')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">8</button>
-                                    <button onclick="pressKey('9')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">9</button>
-                                    <button onclick="pressOp('*')" class="btn-op min-h-[44px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="x" class="w-4 h-4 mx-auto"></i></button>
-                                    <button onclick="pressKey('.')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">.</button>
-                                    <button onclick="pressKey('0')" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full">0</button>
-                                    <button onclick="pressClear()" class="btn-key min-h-[44px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="delete" class="w-4 h-4 mx-auto"></i></button>
-                                    <button onclick="calculate()" class="btn-op min-h-[44px] lg:min-h-[72px] h-full lg:h-full bg-[#5b3df0] text-white border-indigo-600 active:bg-indigo-800">=</button>
+                                <div class="grid grid-cols-4 gap-1.5 lg:gap-3 text-base font-bold text-slate-800 flex-1 min-h-0 auto-rows-[1fr]">
+                                    <button onclick="pressKey('1')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">1</button>
+                                    <button onclick="pressKey('2')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">2</button>
+                                    <button onclick="pressKey('3')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">3</button>
+                                    <button onclick="pressOp('+')" class="btn-op min-h-[38px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="plus" class="w-4 h-4 mx-auto"></i></button>
+                                    <button onclick="pressKey('4')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">4</button>
+                                    <button onclick="pressKey('5')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">5</button>
+                                    <button onclick="pressKey('6')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">6</button>
+                                    <button onclick="pressOp('-')" class="btn-op min-h-[38px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="minus" class="w-4 h-4 mx-auto"></i></button>
+                                    <button onclick="pressKey('7')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">7</button>
+                                    <button onclick="pressKey('8')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">8</button>
+                                    <button onclick="pressKey('9')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">9</button>
+                                    <button onclick="pressOp('*')" class="btn-op min-h-[38px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="x" class="w-4 h-4 mx-auto"></i></button>
+                                    <button onclick="pressKey('.')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">.</button>
+                                    <button onclick="pressKey('0')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">0</button>
+                                    <button onclick="pressClear()" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full"><i data-lucide="delete" class="w-4 h-4 mx-auto"></i></button>
+                                    <button onclick="calculate()" class="btn-op min-h-[38px] lg:min-h-[72px] h-full lg:h-full bg-[#5b3df0] text-white border-indigo-600 active:bg-indigo-800">=</button>
                                 </div>
                             </div>
                         </div>
                         </div>
 
-                        <div id="tx-options-card" class="bg-white rounded-2xl border border-slate-200 p-2.5 lg:p-5 space-y-2.5 lg:space-y-5 flex-1 min-h-0 overflow-hidden">
+                        <div id="tx-options-card" class="bg-white rounded-2xl border border-slate-200 p-2.5 lg:p-5 flex flex-col gap-2 lg:gap-5 shrink-0 lg:flex-1 lg:min-h-0 overflow-y-auto no-scrollbar">
                             <div class="flex items-center justify-between gap-3">
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ</span>
                                 <div class="bg-slate-100 p-0.5 rounded-full flex w-28 shrink-0">
@@ -367,7 +366,7 @@
                             </div>
 
                             <button id="btn-save" onclick="saveTransaction()"
-                            class="w-full bg-slate-900 text-white font-bold py-3 lg:py-4 rounded-2xl text-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-800 transition-colors mt-auto mb-1 lg:mb-0 lg:mt-6">
+                            class="w-full bg-slate-900 text-white font-bold py-3 lg:py-4 rounded-2xl text-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-800 transition-colors mt-auto shrink-0 mb-1 lg:mb-0">
                             <i data-lucide="check-circle" class="w-4 h-4"></i><span
                                 id="save-text">บันทึกรายการ</span>
                         </button>
