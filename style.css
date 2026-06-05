@@ -142,17 +142,45 @@ body {
   #tx-form-body {
     flex: 1 1 auto !important;
     min-height: 0;
-    overflow-y: auto;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
   }
 
-  #tx-form-body::-webkit-scrollbar {
-    display: none;
+  .option-block {
+    min-height: 0;
+  }
+
+  .mobile-option-scroll {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  body.is-add-page .mobile-option-scroll {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.is-add-page #category-grid-scroll {
+    flex: 0 1 auto;
+    max-height: clamp(64px, 16vh, 144px);
+  }
+
+  body.is-add-page #account-grid-scroll,
+  body.is-add-page #tx-budget-group-grid-scroll {
+    flex: 1 1 auto;
+    max-height: clamp(92px, 20vh, 180px);
   }
 
   #category-grid {
     min-height: 48px;
+    align-content: start;
+  }
+
+  #account-grid,
+  #tx-budget-group-grid {
+    align-content: start;
   }
 
   body.is-add-page #btn-save {

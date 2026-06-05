@@ -152,8 +152,8 @@ test('mobile viewport CSS locks the add page to measured visual viewport height'
   assert.match(cssSource, /#page-add/);
   assert.match(cssSource, /height:\s*var\(--add-content-height\)/);
   assert.match(cssSource, /#page-add\s+#?[^{}]*\{/);
-  assert.match(cssSource, /#tx-form-body\s*\{[\s\S]*overflow:\s*visible/);
-  assert.doesNotMatch(cssSource, /#tx-form-body\s*\{[\s\S]*overflow-y:\s*auto/);
+  assert.match(cssSource, /#tx-form-body\s*\{[^}]*overflow:\s*visible/);
+  assert.doesNotMatch(cssSource, /#tx-form-body\s*\{[^}]*overflow-y:\s*auto/);
   assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*overflow-y:\s*auto/);
   assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*-webkit-overflow-scrolling:\s*touch/);
   assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*min-height:\s*0/);
