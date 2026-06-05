@@ -995,6 +995,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const displayInputEl = document.getElementById('display-input');
     if (displayInputEl) {
+        displayInputEl.addEventListener('focus', (e) => {
+            if (e.target.value === '0') {
+                e.target.select();
+            }
+        });
         displayInputEl.addEventListener('input', (e) => {
             let val = e.target.value.replace(/[^0-9.]/g, '');
             val = val.replace(/^0+([0-9])/, '$1');

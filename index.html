@@ -260,12 +260,12 @@
                 <section id="page-add" class="hidden flex-col w-full max-w-6xl mx-auto flex-1 min-h-0 max-md:overflow-hidden md:overflow-hidden pb-1 lg:pb-6 max-md:no-scrollbar">
                     <div class="flex flex-col gap-1.5 lg:gap-6 max-md:flex-1 max-md:min-h-0 md:flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(380px,440px)_minmax(0,1fr)] lg:items-start">
                         <div id="tx-calculator-column" class="flex flex-col gap-1.5 lg:gap-3 lg:sticky lg:top-0 shrink-0 lg:flex-1 lg:min-h-0">
-                        <div class="max-md:bg-indigo-50/50 max-md:border-none md:bg-white rounded-2xl border border-slate-200 px-4 py-3 md:px-5 md:py-4 shrink-0">
+                        <div class="max-md:bg-indigo-50/50 max-md:border-none md:bg-white rounded-2xl border border-slate-200 px-4 max-md:py-2 py-3 md:px-5 md:py-4 shrink-0">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0 flex-1">
                                     <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">ยอดที่ต้องการบันทึก</span>
                                     <input id="display-input" type="text" inputmode="decimal" 
-                                        class="md:hidden w-full bg-transparent outline-none text-[38px] leading-none font-black text-slate-900 tracking-tight mt-0.5" 
+                                        class="md:hidden w-full bg-transparent outline-none text-[30px] leading-none font-black text-slate-900 tracking-tight mt-0.5" 
                                         value="0">
                                     <div id="display"
                                         class="hidden md:block text-[28px] leading-none lg:text-5xl font-extrabold text-slate-800 tracking-tight truncate mt-0.5">
@@ -277,7 +277,7 @@
                                 class="text-[9px] text-indigo-500 font-bold truncate hidden mt-1.5">
                             </div>
                         </div>
-
+ 
                         <div class="hidden md:flex bg-white rounded-2xl border border-slate-200 p-1.5 lg:p-4 flex-col flex-1 min-h-0">
                             <div class="flex flex-col gap-1.5 flex-1 min-h-0">
                                 <div class="flex items-center justify-between shrink-0">
@@ -291,7 +291,7 @@
                                     <button onclick="pressQuickPrice(100)"
                                         class="btn-quick-price py-1.5 lg:py-2 text-[11px]">+100</button>
                                 </div>
-
+ 
                                 <div class="grid grid-cols-4 gap-1.5 lg:gap-3 text-base font-bold text-slate-800 flex-1 min-h-0 auto-rows-fr">
                                     <button onclick="pressKey('1')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">1</button>
                                     <button onclick="pressKey('2')" class="btn-key min-h-[38px] lg:min-h-[72px] h-full lg:h-full">2</button>
@@ -313,9 +313,9 @@
                             </div>
                         </div>
                         </div>
-
+ 
                         <div id="tx-options-card" class="max-md:bg-transparent max-md:border-none max-md:p-0 md:bg-white rounded-2xl md:border md:border-slate-200 p-2.5 md:p-5 flex flex-col gap-4 md:gap-5 max-md:flex-1 md:flex-1 max-md:min-h-0 md:min-h-0 max-md:overflow-y-auto md:overflow-y-auto no-scrollbar">
-                            <div id="tx-form-body" class="flex flex-col gap-3.5 md:gap-4.5 lg:gap-5 flex-none">
+                            <div id="tx-form-body" class="flex flex-col gap-2 md:gap-4.5 lg:gap-5 flex-none">
                                 <div class="flex items-center justify-between gap-3">
                                     <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ</span>
                                     <div class="bg-slate-100 p-0.5 rounded-full flex w-28 shrink-0">
@@ -325,8 +325,8 @@
                                             class="flex-1 py-1 text-[10px] font-bold rounded-full text-slate-400 cursor-pointer">รายรับ</button>
                                     </div>
                                 </div>
-
-                                <div id="tx-date-compact-row" class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 max-md:bg-white md:bg-slate-50 px-3 py-2 md:py-1.5 shadow-sm max-md:shadow-sm">
+ 
+                                <div id="tx-date-compact-row" class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 max-md:bg-white md:bg-slate-50 px-2.5 py-1.5 shadow-sm max-md:shadow-sm">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="calendar-days" class="w-4 h-4 text-slate-400"></i>
                                         <span class="text-xs font-bold text-slate-700 max-md:text-sm">เลือกวันเวลา</span>
@@ -336,26 +336,26 @@
                                             class="min-w-0 w-fit bg-transparent text-xs font-bold text-slate-800 outline-none text-right max-md:text-sm">
                                     </div>
                                 </div>
-
+ 
                                 <div class="space-y-1.5">
                                     <div class="flex items-center justify-between">
                                         <span class="max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[10px] font-bold uppercase tracking-wider text-slate-400">หมวดหมู่</span>
                                     </div>
-                                    <div class="w-full max-md:grid max-md:grid-cols-4 max-md:gap-2.5 md:flex md:overflow-x-auto md:no-scrollbar md:snap-x md:gap-2 lg:flex-wrap" id="category-grid"></div>
+                                    <div class="w-full max-md:grid max-md:grid-cols-4 max-md:gap-1.5 md:flex md:overflow-x-auto md:no-scrollbar md:snap-x md:gap-2 lg:flex-wrap" id="category-grid"></div>
                                 </div>
-
+ 
                                 <!-- Desktop / Mobile Account & Budget -->
                                 <div class="space-y-1.5 md:space-y-2 md:pt-3.5 md:pb-1 md:border-t md:border-slate-100">
                                     <div class="flex items-center justify-between">
                                         <span class="max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[10px] font-bold uppercase tracking-wider text-slate-400">ช่องทางชำระเงิน</span>
                                     </div>
-                                    <div class="w-full flex flex-wrap gap-2.5 md:gap-3 lg:gap-4 py-1" id="account-grid"></div>
+                                    <div class="w-full flex flex-wrap gap-2 max-md:gap-1.5 md:gap-3 lg:gap-4 py-0.5" id="account-grid"></div>
                                 </div>
-
+ 
                                 <div id="tx-budget-group-section" class="space-y-1.5 md:space-y-2 md:pt-3.5 md:pb-1 md:border-t md:border-slate-100">
                                     <!-- Mobile Title (Visible directly on mobile) -->
                                     <span class="max-md:block hidden max-md:text-sm max-md:font-extrabold max-md:text-slate-800 max-md:normal-case text-[10px] font-bold uppercase tracking-wider text-slate-400">กระเป๋าที่ต้องการใช้</span>
-
+ 
                                     <button id="tx-budget-summary-row" type="button" onclick="openBudgetSelectorModal()" class="w-full text-left max-md:hidden md:bg-transparent md:p-0">
                                         <div class="flex items-center justify-between">
                                             <div class="space-y-0.5">
@@ -365,7 +365,7 @@
                                             <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 md:hidden"></i>
                                         </div>
                                     </button>
-                                    <div class="w-full flex flex-wrap gap-2.5 md:gap-3 lg:gap-4 py-1" id="tx-budget-group-grid"></div>
+                                    <div class="w-full flex flex-wrap gap-2 max-md:gap-1.5 md:gap-3 lg:gap-4 py-0.5" id="tx-budget-group-grid"></div>
                                 </div>
                             </div>
 
