@@ -61,27 +61,32 @@ export function calculateDebtBalances(txHistory, accounts) {
 
     if (!txAccountId) return;
 
+    // แปลงตัวเลขให้ปลอดภัย ป้องกัน comma และค่าว่าง
+    const amount = Number(String(tx.amount || 0).replace(/,/g, '')) || 0;
+
     // ถ้ารูดบัตร (spent) -> หนี้เพิ่ม
     if (tx.type === 'spent' && DEBT_ACCOUNT_IDS.includes(txAccountId)) {
-      debtBalances[txAccountId].debtAmount += parseFloat(tx.amount) || 0;
+      debtBalances[txAccountId].debtAmount += amount;
     }
     // ถ้ามีเงินคืนเข้าบัตร (income) -> หนี้ลด
     else if (tx.type === 'income' && DEBT_ACCOUNT_IDS.includes(txAccountId)) {
-      debtBalances[txAccountId].debtAmount -= parseFloat(tx.amount) || 0;
+      debtBalances[txAccountId].debtAmount -= amount;
     }
     // ถ้าเป็นการจ่ายหนี้ (debt_payment) -> หนี้ลด
     else if (tx.type === 'debt_payment' && DEBT_ACCOUNT_IDS.includes(txAccountId)) {
-      debtBalances[txAccountId].debtAmount -= parseFloat(tx.amount) || 0;
+      debtBalances[txAccountId].debtAmount -= amount;
     }
     // ถ้าเป็นการตั้งค่ายอดยกมา (debt_adjustment) -> เพิ่มหนี้
     else if (tx.type === 'debt_adjustment' && DEBT_ACCOUNT_IDS.includes(txAccountId)) {
-      debtBalances[txAccountId].debtAmount += parseFloat(tx.amount) || 0;
+      debtBalances[txAccountId].debtAmount += amount;
     }
   });
 
-  // ป้องกันยอดหนี้ติดลบ (ถ้าจ่ายเกิน)
+  // ป้องกันยอดหนี้ติดลบ หรือเป็น NaN
   Object.values(debtBalances).forEach(acc => {
-    if (acc.debtAmount < 0) acc.debtAmount = 0;
+    if (Number.isNaN(acc.debtAmount) || acc.debtAmount < 0) {
+      acc.debtAmount = 0;
+    }
   });
 
   return Object.values(debtBalances);
