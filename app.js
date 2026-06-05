@@ -228,8 +228,8 @@ function updateCompactSelectionSummary() {
     const calculatedGroups = calculateRemainingBalances(allBudgetGroups, appState.txHistory);
     const selectedGroup = calculatedGroups.find((group) => group.id.toString() === uiState.selectedBudgetGroupId?.toString());
 
-    setText(accountLabel, selectedAccount?.name || 'เลือกช่องทาง');
-    setText(budgetLabel, selectedGroup?.name || 'ไม่ใช้กระเป๋า');
+    if (accountLabel) setText(accountLabel, selectedAccount?.name || 'เลือกช่องทาง');
+    if (budgetLabel) setText(budgetLabel, selectedGroup?.name || 'ไม่ใช้กระเป๋า');
 
     if (budgetButton) {
         budgetButton.classList.toggle('hidden', appState.currentType !== 'spent');
