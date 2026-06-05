@@ -104,6 +104,10 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /id="tx-date-compact-row"/);
   assert.match(htmlSource, /id="mobile-app-shell"/);
   assert.match(htmlSource, /id="mobile-app-header"/);
+  assert.match(htmlSource, /id="category-grid-scroll"/);
+  assert.match(htmlSource, /id="account-grid-scroll"/);
+  assert.match(htmlSource, /id="tx-budget-group-grid-scroll"/);
+  assert.match(htmlSource, /class="mobile-option-scroll no-scrollbar"/);
   assert.match(htmlSource, /min-h-\[38px\]/);
   assert.doesNotMatch(htmlSource, /id="tab-acc-money"/);
   assert.doesNotMatch(htmlSource, /ข้อมูลประกอบรายการ/);
@@ -145,6 +149,14 @@ test('mobile viewport CSS locks the add page to measured visual viewport height'
   assert.match(cssSource, /#page-add/);
   assert.match(cssSource, /height:\s*var\(--add-content-height\)/);
   assert.match(cssSource, /#page-add\s+#?[^{}]*\{/);
+  assert.match(cssSource, /#tx-form-body\s*\{[\s\S]*overflow:\s*visible/);
+  assert.doesNotMatch(cssSource, /#tx-form-body\s*\{[\s\S]*overflow-y:\s*auto/);
+  assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*overflow-y:\s*auto/);
+  assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*-webkit-overflow-scrolling:\s*touch/);
+  assert.match(cssSource, /\.mobile-option-scroll\s*\{[\s\S]*min-height:\s*0/);
+  assert.match(cssSource, /#category-grid-scroll/);
+  assert.match(cssSource, /#account-grid-scroll/);
+  assert.match(cssSource, /#tx-budget-group-grid-scroll/);
 });
 
 test('desktop add page uses a dedicated two-column layout', () => {
