@@ -143,7 +143,7 @@ export async function saveTransactionFlow({
 
   // Warning check if budget would go negative
   if (uiState.selectedBudgetGroupId && budgetGroups) {
-    const matchedGroup = budgetGroups.find(g => g.id.toString() === uiState.selectedBudgetGroupId.toString());
+    const matchedGroup = budgetGroups.find(g => g && g.id != null && String(g.id) === String(uiState.selectedBudgetGroupId));
     if (matchedGroup) {
       const isNegative = matchedGroup.remaining - finalVal < 0;
       if (isNegative) {
@@ -187,7 +187,7 @@ export async function saveTransactionFlow({
     
     // Sync affected budget groups to backend
     updatedGroups.forEach((g) => {
-      const oldG = budgetGroups.find((og) => og.id.toString() === g.id.toString());
+      const oldG = budgetGroups.find((og) => og && og.id != null && g && g.id != null && String(og.id) === String(g.id));
       if (!oldG || oldG.remaining !== g.remaining) {
         if (syncQueueInstance) {
           syncQueueInstance.enqueue({
@@ -260,7 +260,7 @@ export async function executeDeleteFlow({
     
     // Sync affected budget groups to backend
     updatedGroups.forEach((g) => {
-      const oldG = budgetGroups.find((og) => og.id.toString() === g.id.toString());
+      const oldG = budgetGroups.find((og) => og && og.id != null && g && g.id != null && String(og.id) === String(g.id));
       if (!oldG || oldG.remaining !== g.remaining) {
         if (syncQueueInstance) {
           syncQueueInstance.enqueue({

@@ -14,7 +14,7 @@ export function buildTransactionRecord({
   matchedAccount,
 }) {
   const matchedBudgetGroup = (budgetGroups || []).find(
-    (g) => g.id.toString() === selectedBudgetGroupId?.toString()
+    (g) => g && g.id != null && String(g.id) === String(selectedBudgetGroupId)
   );
 
   const transactionRecord = {

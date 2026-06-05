@@ -220,7 +220,7 @@ export async function payRecurringItem({
   // Resolve target budget group
   let targetBudgetGroupId = chosenBudgetGroupId;
   if (targetBudgetGroupId === undefined) {
-    const hasDefault = item.defaultBudgetGroupId && budgetGroups.some((g) => g.id.toString() === item.defaultBudgetGroupId.toString() && !g.isArchived);
+    const hasDefault = item.defaultBudgetGroupId && budgetGroups.some((g) => g && g.id != null && String(g.id) === String(item.defaultBudgetGroupId) && !g.isArchived);
     if (hasDefault) {
       targetBudgetGroupId = item.defaultBudgetGroupId;
     } else {
@@ -257,7 +257,7 @@ export async function payRecurringItem({
   }
 
   // Deduct/warn if negative balance
-  const matchedBudgetGroup = budgetGroups.find((g) => g.id.toString() === targetBudgetGroupId?.toString());
+  const matchedBudgetGroup = budgetGroups.find((g) => g && g.id != null && String(g.id) === String(targetBudgetGroupId));
   if (matchedBudgetGroup) {
     const isNegative = matchedBudgetGroup.remaining - item.amount < 0;
     if (isNegative) {
@@ -311,7 +311,7 @@ export async function payRecurringItem({
     
     // Sync affected budget groups to backend
     updatedGroups.forEach((g) => {
-      const oldG = budgetGroups.find((og) => og.id.toString() === g.id.toString());
+      const oldG = budgetGroups.find((og) => og && og.id != null && g && g.id != null && String(og.id) === String(g.id));
       if (!oldG || oldG.remaining !== g.remaining) {
         if (syncQueueInstance) {
           syncQueueInstance.enqueue({
@@ -393,7 +393,7 @@ export async function cancelRecurringPayment({
       }
       
       updatedGroups.forEach((g) => {
-        const oldG = budgetGroups.find((og) => og.id.toString() === g.id.toString());
+        const oldG = budgetGroups.find((og) => og && og.id != null && g && g.id != null && String(og.id) === String(g.id));
         if (!oldG || oldG.remaining !== g.remaining) {
           if (syncQueueInstance) {
             syncQueueInstance.enqueue({

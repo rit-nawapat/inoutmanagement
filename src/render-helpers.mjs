@@ -32,7 +32,7 @@ export function createRecurringRow(item, { isPaidThisMonth, budgetGroups = [], o
   const leftText = createEl('div');
   leftText.appendChild(createEl('h4', { className: 'font-extrabold text-slate-800 text-[14px] leading-tight', text: item.name }));
   
-  const matchedG = (budgetGroups || []).find((g) => g.id.toString() === item.defaultBudgetGroupId?.toString());
+  const matchedG = (budgetGroups || []).find((g) => g && g.id != null && String(g.id) === String(item.defaultBudgetGroupId));
   const budgetInfo = matchedG ? ` • งบ: ${matchedG.name}` : '';
   leftText.appendChild(createEl('p', { className: 'text-[10px] text-slate-400 mt-0.5 font-bold', text: `${item.desc}${budgetInfo}` }));
   leftWrap.appendChild(leftText);

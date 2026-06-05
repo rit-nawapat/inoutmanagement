@@ -227,7 +227,7 @@ function updateCompactSelectionSummary() {
     const budgetButton = document.getElementById('tx-budget-summary-row');
     const selectedAccount = accounts.find((acc) => acc.id === uiState.selectedAccount);
     const calculatedGroups = calculateRemainingBalances(allBudgetGroups, appState.txHistory);
-    const selectedGroup = calculatedGroups.find((group) => group.id.toString() === uiState.selectedBudgetGroupId?.toString());
+    const selectedGroup = calculatedGroups.find((group) => group && group.id != null && String(group.id) === String(uiState.selectedBudgetGroupId));
 
     if (accountLabel) setText(accountLabel, selectedAccount?.name || 'เลือกช่องทาง');
     if (budgetLabel) setText(budgetLabel, selectedGroup?.name || 'ไม่ใช้กระเป๋า');
@@ -440,6 +440,24 @@ async function executeDeleteRecurring(id) {
         updateRecurringSummaryFn: updateRecurringSummary,
         showToast,
         apiClient,
+    });
+}
+
+async function cancelRecurringPayment(id) {
+    await cancelRecurringPaymentService({
+        id,
+        currentUserProfileId,
+        getRecurringItems,
+        saveRecurringItems,
+        updateDashboardFn: updateDashboard,
+        updateRecurringSummaryFn: updateRecurringSummary,
+        renderRecurringListFn: renderRecurringList,
+        showToast,
+        apiClient,
+        appState,
+        budgetGroups: allBudgetGroups,
+        saveBudgetGroupsFn: saveBudgetGroups,
+        showConfirmDialogFn: showConfirmDialog,
     });
 }
 
@@ -980,10 +998,20 @@ async function closeConfirmDialog(result) {
     if (result && onConfirmCallback) {
         const btn = document.getElementById('confirm-btn-action');
         const loadingState = setDialogConfirmLoading(btn);
-        await onConfirmCallback(result);
-        loadingState?.restore();
+        try {
+            await onConfirmCallback(result);
+        } catch (error) {
+            console.error("Error in confirm callback:", error);
+            showToast("เกิดข้อผิดพลาดในการดำเนินการ", "error");
+        } finally {
+            loadingState?.restore();
+        }
     } else if (!result && onConfirmCallback) {
-        onConfirmCallback(result);
+        try {
+            await onConfirmCallback(result);
+        } catch (error) {
+            console.error("Error in cancel callback:", error);
+        }
     }
     resolveConfirmDialog(result);
     onConfirmCallback = null;

@@ -39,13 +39,13 @@ export function calculateRemainingBalances(groups, txHistory) {
       const txDate = new Date(tx.isoDate);
       if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
         const amount = parseFloat(tx.amount) || 0;
-        const group = groups.find((g) => g.id.toString() === tx.budgetGroupId.toString());
+        const group = groups.find((g) => g && g.id != null && String(g.id) === String(tx.budgetGroupId));
         if (group) {
           group.remaining -= amount;
           group.spent += amount;
 
           if (group.parentId) {
-            const parent = groups.find((p) => p.id.toString() === group.parentId.toString());
+            const parent = groups.find((p) => p && p.id != null && String(p.id) === String(group.parentId));
             if (parent) {
               parent.remaining -= amount;
               parent.spent += amount;
@@ -163,7 +163,7 @@ export function renderBudgetSummary({
     card.appendChild(progressTrack);
 
     // Render children for this parent
-    const childGroups = children.filter((c) => c.parentId.toString() === parent.id.toString()).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const childGroups = children.filter((c) => c && c.parentId != null && parent && parent.id != null && String(c.parentId) === String(parent.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
     if (childGroups.length > 0) {
       const childContainer = createEl('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-100 pt-4 mt-2' });
 
@@ -256,12 +256,12 @@ export function renderBudgetSelector({
   container.appendChild(allChip);
 
   activeGroups.forEach((group) => {
-    const isSelected = group.id.toString() === selectedBudgetGroupId?.toString();
+    const isSelected = group && group.id != null && String(group.id) === String(selectedBudgetGroupId);
     const isChild = !!group.parentId;
     const gColor = getColorClasses(group.color);
 
     const chip = createEl('div', { className: 'flex-shrink-0 snap-start' });
-    chip.onclick = () => onSelect?.(group.id.toString());
+    chip.onclick = () => onSelect?.(group && group.id != null ? String(group.id) : '');
 
     const pill = createEl('div', {
       className: `flex items-center justify-center space-x-1.5 max-md:py-2 max-md:px-2 md:py-2 md:px-3.5 max-md:rounded-xl md:rounded-xl text-[10px] max-md:text-[11px] lg:text-xs lg:py-2.5 lg:px-4.5 font-bold border transition-all cursor-pointer ${isSelected
@@ -296,8 +296,8 @@ export function populateBudgetSelectOptions(selectEl, groups, selectedValue = ''
     const opt = createEl('option', {
       text: `${group.parentId ? '   └ ' : ''}${group.name} (฿${group.budget.toLocaleString()})`,
     });
-    opt.value = group.id.toString();
-    if (group.id.toString() === selectedValue?.toString()) opt.selected = true;
+    opt.value = group && group.id != null ? String(group.id) : '';
+    if (group && group.id != null && String(group.id) === String(selectedValue)) opt.selected = true;
     selectEl.appendChild(opt);
   });
 }
@@ -411,7 +411,7 @@ export function openManageBudgetGroupsModal(doc = globalThis.document) {
           doc.getElementById('btn-cancel-budget-group').classList.remove('hidden');
       },
       onArchive: async (groupId) => {
-          const index = ctx.allBudgetGroups().findIndex(g => g.id.toString() === groupId.toString());
+          const index = ctx.allBudgetGroups().findIndex(g => g && g.id != null && String(g.id) === String(groupId));
           if (index > -1) {
               ctx.allBudgetGroups()[index].isArchived = !ctx.allBudgetGroups()[index].isArchived;
               ctx.saveBudgetGroups(ctx.localStorage, ctx.currentUserProfileId(), ctx.allBudgetGroups());
@@ -444,7 +444,7 @@ export function openManageBudgetGroupsModal(doc = globalThis.document) {
           });
           if (!confirmDel) return;
 
-          const index = ctx.allBudgetGroups().findIndex(g => g.id.toString() === groupId.toString());
+          const index = ctx.allBudgetGroups().findIndex(g => g && g.id != null && String(g.id) === String(groupId));
           if (index > -1) {
               ctx.allBudgetGroups().splice(index, 1);
               ctx.saveBudgetGroups(ctx.localStorage, ctx.currentUserProfileId(), ctx.allBudgetGroups());
@@ -518,12 +518,12 @@ export async function saveBudgetGroup(doc = globalThis.document) {
       remaining: budget,
       parentId,
       color,
-      order: isEdit ? ctx.allBudgetGroups().find(g => g.id.toString() === idVal).order : ctx.allBudgetGroups().length,
-      isArchived: isEdit ? ctx.allBudgetGroups().find(g => g.id.toString() === idVal).isArchived : false
+      order: isEdit ? ctx.allBudgetGroups().find(g => g && g.id != null && String(g.id) === String(idVal))?.order : ctx.allBudgetGroups().length,
+      isArchived: isEdit ? ctx.allBudgetGroups().find(g => g && g.id != null && String(g.id) === String(idVal))?.isArchived : false
   };
 
   if (isEdit) {
-      const index = ctx.allBudgetGroups().findIndex(g => g.id.toString() === idVal);
+      const index = ctx.allBudgetGroups().findIndex(g => g && g.id != null && String(g.id) === String(idVal));
       ctx.allBudgetGroups()[index] = newGroup;
   } else {
       ctx.allBudgetGroups().push(newGroup);
