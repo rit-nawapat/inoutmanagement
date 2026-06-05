@@ -187,13 +187,28 @@ export function renderDebtPage({
           text: tx.categoryName || '-',
         }));
         
-        const hRight = createEl('div', { className: 'shrink-0 pt-0.5 text-right' });
+        const hRight = createEl('div', { className: 'shrink-0 pt-0.5 text-right flex items-center space-x-2' });
+        const amtWrap = createEl('div');
         let amtStr = parseFloat(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         if (['spent', 'debt_adjustment'].includes(tx.type)) {
-          hRight.appendChild(createEl('span', { className: 'block text-[11px] font-bold tabular-nums text-rose-500', text: `+฿${amtStr}` }));
+          amtWrap.appendChild(createEl('span', { className: 'block text-[11px] font-bold tabular-nums text-rose-500', text: `+฿${amtStr}` }));
         } else {
-          hRight.appendChild(createEl('span', { className: 'block text-[11px] font-bold tabular-nums text-emerald-500', text: `-฿${amtStr}` }));
+          amtWrap.appendChild(createEl('span', { className: 'block text-[11px] font-bold tabular-nums text-emerald-500', text: `-฿${amtStr}` }));
         }
+        hRight.appendChild(amtWrap);
+
+        const deleteBtn = createEl('button', {
+          className: 'p-1 bg-slate-200/50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer transition-colors active:scale-90',
+          attrs: { title: 'ลบรายการ' }
+        });
+        deleteBtn.appendChild(createIcon('trash-2', 'w-3 h-3'));
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (globalThis.window?.deleteTransaction) {
+                globalThis.window.deleteTransaction(tx.id);
+            }
+        };
+        hRight.appendChild(deleteBtn);
 
         hItem.appendChild(hLeft);
         hItem.appendChild(hRight);

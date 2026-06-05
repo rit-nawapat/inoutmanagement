@@ -936,6 +936,7 @@ async function executeDelete(id) {
         renderHistoryFn: renderHistory,
         renderRecurringListFn: renderRecurringList,
         updateRecurringSummaryFn: updateRecurringSummary,
+        renderDebtFn: renderDebt,
         showToast,
         apiClient,
     });

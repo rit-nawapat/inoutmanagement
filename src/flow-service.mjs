@@ -293,6 +293,7 @@ export async function executeDeleteFlow({
   renderHistoryFn,
   renderRecurringListFn,
   updateRecurringSummaryFn,
+  renderDebtFn,
   showToast,
   apiClient,
 }) {
@@ -330,6 +331,8 @@ export async function executeDeleteFlow({
     renderRecurringListFn?.();
     updateRecurringSummaryFn?.();
     renderHistoryFn?.();
+  } else if (appState.currentPage === 'debt') {
+    renderDebtFn?.();
   } else {
     renderHistoryFn?.();
   }
