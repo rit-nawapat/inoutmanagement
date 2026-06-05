@@ -529,7 +529,11 @@ appState.txHistory = JSON.parse(localStorage.getItem(getHistoryKey()) || localSt
 uiState.selectedCategory = categories.spent[0].id;
 uiState.selectedAccount = accounts[0].id;
 
+let isDateManuallyChanged = false;
+let isUpdatingProgrammatically = false;
+
 function setLocalDatetime() {
+    isUpdatingProgrammatically = true;
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     const txDate = document.getElementById('tx-date');
@@ -537,6 +541,8 @@ function setLocalDatetime() {
         txDate.value = now.toISOString().slice(0, 16);
         txDate.dispatchEvent(new Event('change', { bubbles: true }));
     }
+    isDateManuallyChanged = false;
+    isUpdatingProgrammatically = false;
 }
 
 let touchStartX = 0, touchEndX = 0;
@@ -657,6 +663,9 @@ function switchPage(pageId) {
         mainContent.classList.toggle('overflow-visible', pageId !== 'add');
     }
     if (pageId === 'add') scrollMainContentToTop();
+    if (pageId === 'add' && !uiState.editModeId && !isDateManuallyChanged) {
+        setLocalDatetime();
+    }
 
     document.getElementById('mobile-title').innerText = { dashboard: 'หน้าแรก', list: 'ลิสต์ประจำ', add: 'บันทึกรายการ', history: 'ประวัติธุรกรรม', debt: 'จัดการหนี้สิน' }[pageId];
 
@@ -851,11 +860,17 @@ function setupAutoSyncListeners() {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             handleFocusSync();
+            if (appState.currentPage === 'add' && !uiState.editModeId && !isDateManuallyChanged) {
+                setLocalDatetime();
+            }
         }
     });
 
     window.addEventListener('focus', () => {
         handleFocusSync();
+        if (appState.currentPage === 'add' && !uiState.editModeId && !isDateManuallyChanged) {
+            setLocalDatetime();
+        }
     });
 }
 
@@ -1150,12 +1165,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mobileDateTextEl.innerText = `${dateText} ${hours}:${minutes}`;
             }
         };
-        txDate.addEventListener('input', updateMobileDateText);
-        txDate.addEventListener('change', updateMobileDateText);
+        const handleDateChange = () => {
+            updateMobileDateText();
+            if (!isUpdatingProgrammatically) {
+                isDateManuallyChanged = true;
+            }
+        };
+        txDate.addEventListener('input', handleDateChange);
+        txDate.addEventListener('change', handleDateChange);
         updateMobileDateText();
     }
 
     setLocalDatetime();
+
+    window.setInterval(() => {
+        const txDate = document.getElementById('tx-date');
+        if (txDate && appState.currentPage === 'add' && !uiState.editModeId && !isDateManuallyChanged && document.activeElement !== txDate) {
+            setLocalDatetime();
+        }
+    }, 20000);
     renderCategories();
     renderAccounts();
     updateDashboard();

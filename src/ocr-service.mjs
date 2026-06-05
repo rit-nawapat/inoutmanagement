@@ -80,7 +80,10 @@ export function processSlipOCR(fileInput, doc = globalThis.document, win = globa
 
           if (parsedDate) {
               const dateInput = doc.getElementById('tx-date');
-              if (dateInput) dateInput.value = parsedDate;
+              if (dateInput) {
+                  dateInput.value = parsedDate;
+                  dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+              }
               ctx.showToast('ปรับปรุงวันที่และเวลาตามสลิป', 'success');
           }
 
