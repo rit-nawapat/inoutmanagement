@@ -7,6 +7,7 @@ import {
   checkDuplicateSlipInHistory,
   getHistoryStorageKey,
   getRecurringStorageKey,
+  isDraftTransactionDateFresh,
   loadRecurringItems,
   loadCurrentProfileId,
   loadSavedProfiles,
@@ -246,6 +247,30 @@ test('checkDuplicateSlipInHistory returns the matching transaction', () => {
 
 test('getHistoryStorageKey namespaces transaction history by profile id', () => {
   assert.equal(getHistoryStorageKey('user_123'), 'my_tx_history_user_123');
+});
+
+test('isDraftTransactionDateFresh only restores recent transaction drafts', () => {
+  const now = new Date('2026-06-05T15:30:00+07:00');
+
+  assert.equal(
+    isDraftTransactionDateFresh('2026-06-05T15:10:00+07:00', now),
+    true
+  );
+
+  assert.equal(
+    isDraftTransactionDateFresh('2026-06-05T13:00:00+07:00', now),
+    false
+  );
+
+  assert.equal(
+    isDraftTransactionDateFresh('2026-06-04T23:55:00+07:00', now),
+    false
+  );
+
+  assert.equal(
+    isDraftTransactionDateFresh('', now),
+    false
+  );
 });
 
 test('profile storage helpers read and write the profile keys', () => {

@@ -100,6 +100,20 @@ export function saveCurrentProfileId(storage, profileId) {
   }
 }
 
+export function isDraftTransactionDateFresh(savedAt, now = new Date(), maxAgeMinutes = 60) {
+  if (!savedAt) return false;
+
+  const savedAtDate = new Date(savedAt);
+  if (Number.isNaN(savedAtDate.getTime()) || Number.isNaN(now.getTime())) {
+    return false;
+  }
+
+  const ageMs = now.getTime() - savedAtDate.getTime();
+  if (ageMs < 0) return false;
+
+  return ageMs <= maxAgeMinutes * 60 * 1000;
+}
+
 export function parseDateTimeFromOCR(ocrText) {
   const cleanText = ocrText.replace(/\s+/g, ' ');
   const thaiDateRegex = /(\d{1,2})\s*([\u0E00-\u0E7F\.]+)\s*(\d{2,4})\s*(?:-|เวลา)?\s*(\d{2}:\d{2})/;

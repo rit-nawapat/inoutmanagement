@@ -7,6 +7,7 @@ import {
     getHistoryStorageKey,
     getRecurringStorageKey,
     loadRecurringItems,
+    isDraftTransactionDateFresh,
     saveCurrentProfileId,
     saveSavedProfiles,
     saveRecurringItems,
@@ -906,6 +907,7 @@ async function closeConfirmDialog(result) {
 // -------------------------------------------------------------
 function saveDraft() {
     const draft = {
+        savedAt: new Date().toISOString(),
         expression: uiState.expression,
         selectedCategory: uiState.selectedCategory,
         selectedAccount: uiState.selectedAccount,
@@ -932,7 +934,7 @@ function loadDraft() {
             uiState.currentSlipRefNo = draft.currentSlipRefNo || '';
             uiState.currentScannedBarcode = draft.currentScannedBarcode || '';
             const txDate = document.getElementById('tx-date');
-            if (draft.txDate && txDate) {
+            if (draft.txDate && txDate && isDraftTransactionDateFresh(draft.savedAt)) {
                 txDate.value = draft.txDate;
                 txDate.dispatchEvent(new Event('change', { bubbles: true }));
             }
@@ -1385,4 +1387,3 @@ function triggerDatePicker() {
 
 window.triggerDatePicker = triggerDatePicker;
 window.closeCupertinoDatePicker = closeCupertinoDatePicker;
-
