@@ -56,11 +56,57 @@ export async function syncDataFromSheetFlow({
   }
 
   if (data && data.history) {
-    appState.txHistory = normalizeTransactionHistory(data.history, {
+    let history = normalizeTransactionHistory(data.history, {
       categories,
       accounts,
       recurringItems: mappedRecurring || [],
     });
+
+    // Reconcile with pending operations in the sync queue
+    let queue = [];
+    try {
+      const queueStr = localStorageRef.getItem('app_sync_queue');
+      queue = queueStr ? JSON.parse(queueStr) : [];
+    } catch (e) {
+      console.error('Failed to parse sync queue for reconciliation', e);
+    }
+
+    if (Array.isArray(queue) && queue.length > 0) {
+      queue.forEach((op) => {
+        const opAction = op.action || '';
+        const isDelete = opAction === 'delete' || opAction.startsWith('delete');
+        const isEdit = opAction === 'edit' || opAction.startsWith('edit');
+        const isAdd = opAction === 'add' || opAction.startsWith('add');
+        const isTxOp = !op.sheetName || op.sheetName.endsWith('_History');
+
+        if (isTxOp) {
+          const targetId = op.id || (op.data && op.data.id) || op.uuid;
+          if (targetId) {
+            if (isDelete) {
+              history = history.filter((t) => String(t.id) !== String(targetId));
+            } else if (isEdit) {
+              const idx = history.findIndex((t) => String(t.id) === String(targetId));
+              if (idx > -1) {
+                history[idx] = { ...history[idx], ...op };
+              }
+            } else if (isAdd) {
+              const exists = history.some((t) => String(t.id) === String(targetId));
+              if (!exists) {
+                const uiRecord = {
+                  ...op,
+                  categoryIcon: op.categoryIcon || 'help-circle',
+                  accountIcon: op.accountIcon || 'banknote',
+                  date: op.date || new Date(op.timestamp || Date.now()).toLocaleString(),
+                };
+                history.unshift(uiRecord);
+              }
+            }
+          }
+        }
+      });
+    }
+
+    appState.txHistory = history;
     appState.txHistory.sort((a, b) => b.id - a.id);
     localStorageRef.setItem(getHistoryKey(), JSON.stringify(appState.txHistory));
     isUpdated = true;

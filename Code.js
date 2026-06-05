@@ -277,10 +277,12 @@ function doPost(e) {
         var op = data.operations[i];
         results.push(processSingleOperation_(ss, op));
       }
+      SpreadsheetApp.flush();
       return jsonResponse({ status: 'Success', results: results });
     } else {
       // Legacy single operation support
       var result = processSingleOperation_(ss, data);
+      SpreadsheetApp.flush();
       return result.imageUrl !== undefined ? jsonResponse(result) : textResponse('Success');
     }
   } catch (error) {
