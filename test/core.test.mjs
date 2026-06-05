@@ -164,6 +164,19 @@ test('mobile viewport CSS locks the add page to measured visual viewport height'
   assert.doesNotMatch(cssSource, /body\.is-add-page #tx-budget-group-grid-scroll[\s\S]*overflow-y:\s*auto/);
 });
 
+test('short mobile viewports apply a compact add-page layout for installed PWA mode', () => {
+  const cssSource = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+
+  assert.match(cssSource, /@media \(max-width: 767px\) and \(max-height: 900px\)/);
+  assert.match(cssSource, /#main-content-scroll\s*\{[\s\S]*padding:\s*0\.25rem 0\.375rem !important/);
+  assert.match(cssSource, /#tx-options-card\s*\{[\s\S]*padding:\s*0\.45rem 0\.5rem !important/);
+  assert.match(cssSource, /#tx-form-body\s*\{[\s\S]*gap:\s*0\.375rem/);
+  assert.match(cssSource, /#display-input\s*\{[\s\S]*font-size:\s*24px/);
+  assert.match(cssSource, /body\.is-add-page #category-grid,\s*body\.is-add-page #account-grid,\s*body\.is-add-page #tx-budget-group-grid\s*\{[\s\S]*gap:\s*0\.375rem/);
+  assert.match(cssSource, /body\.is-add-page #account-grid > div > div,\s*body\.is-add-page #tx-budget-group-grid > div > div\s*\{[\s\S]*padding:\s*0\.75rem 0\.625rem/);
+  assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*height:\s*44px/);
+});
+
 test('desktop add page uses a dedicated two-column layout', () => {
   const htmlSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 

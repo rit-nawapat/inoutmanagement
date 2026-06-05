@@ -202,6 +202,84 @@ body {
   }
 }
 
+@media (max-width: 767px) and (max-height: 900px) {
+  body.is-add-page #main-content-scroll {
+    padding: 0.25rem 0.375rem !important;
+  }
+
+  body.is-add-page #tx-options-card {
+    padding: 0.45rem 0.5rem !important;
+    gap: 0.375rem;
+  }
+
+  body.is-add-page #tx-form-body {
+    gap: 0.375rem;
+  }
+
+  body.is-add-page #tx-calculator-column > div:first-child {
+    padding: 0.75rem 0.9rem !important;
+  }
+
+  body.is-add-page #display-input {
+    font-size: 24px;
+  }
+
+  body.is-add-page #category-grid,
+  body.is-add-page #account-grid,
+  body.is-add-page #tx-budget-group-grid {
+    gap: 0.375rem;
+  }
+
+  body.is-add-page #category-grid > div {
+    min-width: 0 !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    gap: 0.375rem !important;
+    border-radius: 0.875rem !important;
+  }
+
+  body.is-add-page #category-grid > div > div:first-child {
+    width: 2.1rem;
+    height: 2.1rem;
+  }
+
+  body.is-add-page #category-grid > div > span:last-child {
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+  }
+
+  body.is-add-page #account-grid > div,
+  body.is-add-page #tx-budget-group-grid > div {
+    min-width: 0 !important;
+  }
+
+  body.is-add-page #account-grid > div > div,
+  body.is-add-page #tx-budget-group-grid > div > div {
+    padding: 0.75rem 0.625rem !important;
+    border-radius: 1rem !important;
+    gap: 0.375rem !important;
+  }
+
+  body.is-add-page #account-grid > div > div > span,
+  body.is-add-page #tx-budget-group-grid > div > div > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.is-add-page #account-grid > div > div > svg,
+  body.is-add-page #tx-budget-group-grid > div > div > svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  body.is-add-page #btn-save {
+    flex: 0 0 44px;
+    height: 44px;
+  }
+}
+
 .btn-key,
 .btn-op,
 .btn-quick-price {
