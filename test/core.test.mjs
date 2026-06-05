@@ -142,7 +142,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.doesNotMatch(budgetSource, /max-md:py-3\.5/);
 });
 
-test('mobile viewport CSS locks the add page to measured visual viewport height', () => {
+test('mobile add page uses one scroll container with a sticky save action', () => {
   const cssSource = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 
   assert.match(cssSource, /--app-height:\s*100dvh/);
@@ -152,17 +152,27 @@ test('mobile viewport CSS locks the add page to measured visual viewport height'
   assert.match(cssSource, /#main-content-scroll/);
   assert.match(cssSource, /height:\s*var\(--content-height\)/);
   assert.match(cssSource, /body\.is-add-page #main-content-scroll/);
+  assert.match(cssSource, /body\.is-add-page #main-content-scroll\s*\{[\s\S]*overflow-y:\s*auto/);
+  assert.match(cssSource, /body\.is-add-page #main-content-scroll\s*\{[\s\S]*-webkit-overflow-scrolling:\s*touch/);
+  assert.match(cssSource, /body\.is-add-page #main-content-scroll\s*\{[\s\S]*padding-bottom:\s*calc\(var\(--mobile-save-height\) \+ var\(--mobile-nav-height\)/);
+  assert.doesNotMatch(cssSource, /body\.is-add-page #main-content-scroll\s*\{[^}]*overflow:\s*hidden/);
   assert.match(cssSource, /body:not\(\.is-add-page\) #main-content-scroll/);
   assert.match(cssSource, /--mobile-save-height:\s*48px/);
   assert.match(cssSource, /--add-content-height/);
   assert.match(cssSource, /body\.is-add-page #btn-save/);
   assert.doesNotMatch(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*position:\s*fixed/);
+  assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*position:\s*sticky/);
+  assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*bottom:\s*calc\(var\(--mobile-nav-height\)/);
   assert.match(cssSource, /height:\s*var\(--mobile-save-height\)/);
   assert.match(cssSource, /flex:\s*0 0 var\(--mobile-save-height\)/);
   assert.match(cssSource, /body\.is-add-page #tx-options-card/);
   assert.match(cssSource, /max-height:\s*none/);
+  assert.match(cssSource, /body\.is-add-page #tx-options-card\s*\{[\s\S]*overflow:\s*visible/);
   assert.match(cssSource, /#page-add/);
-  assert.match(cssSource, /height:\s*var\(--add-content-height\)/);
+  assert.match(cssSource, /min-height:\s*var\(--add-content-height\)/);
+  assert.match(cssSource, /#page-add\s*\{[\s\S]*height:\s*auto/);
+  assert.match(cssSource, /#page-add\s*\{[\s\S]*max-height:\s*none/);
+  assert.match(cssSource, /#page-add\s*\{[\s\S]*overflow:\s*visible/);
   assert.match(cssSource, /#page-add\s+#?[^{}]*\{/);
   assert.match(cssSource, /#tx-form-body\s*\{[^}]*overflow:\s*visible/);
   assert.doesNotMatch(cssSource, /#tx-form-body\s*\{[^}]*overflow-y:\s*auto/);
