@@ -107,7 +107,10 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /id="category-grid-scroll"/);
   assert.match(htmlSource, /id="account-grid-scroll"/);
   assert.match(htmlSource, /id="tx-budget-group-grid-scroll"/);
-  assert.match(htmlSource, /class="mobile-option-scroll no-scrollbar"/);
+  assert.match(
+    htmlSource,
+    /<[^>]*(?:id="(?:category-grid-scroll|account-grid-scroll|tx-budget-group-grid-scroll)"[^>]*class="[^"]*\bmobile-option-scroll\b[^"]*\bno-scrollbar\b[^"]*"|class="[^"]*\bmobile-option-scroll\b[^"]*\bno-scrollbar\b[^"]*"[^>]*id="(?:category-grid-scroll|account-grid-scroll|tx-budget-group-grid-scroll)")[^>]*>/
+  );
   assert.match(htmlSource, /min-h-\[38px\]/);
   assert.doesNotMatch(htmlSource, /id="tab-acc-money"/);
   assert.doesNotMatch(htmlSource, /ข้อมูลประกอบรายการ/);
