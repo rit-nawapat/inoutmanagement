@@ -172,8 +172,9 @@ body {
   }
 
   body.is-add-page #category-grid-scroll {
-    flex: 0 1 auto;
-    max-height: clamp(64px, 16vh, 144px);
+    flex: 0 0 auto;
+    max-height: none;
+    overflow: visible;
   }
 
   body.is-add-page #account-grid-scroll,
