@@ -89,8 +89,12 @@ test('debt history UI uses a bounded scroll panel with richer row structure', ()
 test('mobile add page uses a compact one-page layout and removes OCR controls', () => {
   const appSource = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
   const htmlSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const catalogSource = readFileSync(new URL('../src/catalog-service.mjs', import.meta.url), 'utf8');
+  const budgetSource = readFileSync(new URL('../src/budget-service.mjs', import.meta.url), 'utf8');
 
   assert.match(htmlSource, /min-h-\[100dvh\] overflow-x-hidden md:h-\[100dvh\] md:overflow-hidden/);
+  assert.match(htmlSource, /href="style\.css\?v=\d+"/);
+  assert.match(htmlSource, /src="app\.js\?v=\d+"/);
   assert.match(htmlSource, /id="tx-budget-summary-row"/);
   assert.match(htmlSource, /id="account-selector-modal"/);
   assert.match(htmlSource, /id="budget-selector-modal"/);
@@ -128,6 +132,14 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(appSource, /if\s*\(pageId === 'add'\)\s*scrollMainContentToTop\(\)/);
   assert.doesNotMatch(appSource, /window\.processSlipOCR\s*=/);
   assert.doesNotMatch(appSource, /function\s+toggleAddDetails\s*\(/);
+  assert.match(catalogSource, /max-md:py-1/);
+  assert.match(catalogSource, /max-md:w-7 max-md:h-7/);
+  assert.match(catalogSource, /max-md:text-\[9px\]/);
+  assert.match(catalogSource, /max-md:py-2 max-md:px-2/);
+  assert.doesNotMatch(catalogSource, /max-md:py-2\.5/);
+  assert.doesNotMatch(catalogSource, /max-md:py-3\.5/);
+  assert.match(budgetSource, /max-md:py-2 max-md:px-2/);
+  assert.doesNotMatch(budgetSource, /max-md:py-3\.5/);
 });
 
 test('mobile viewport CSS locks the add page to measured visual viewport height', () => {
