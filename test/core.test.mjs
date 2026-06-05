@@ -142,7 +142,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.doesNotMatch(budgetSource, /max-md:py-3\.5/);
 });
 
-test('mobile add page uses one scroll container with a sticky save action', () => {
+test('mobile add page uses one scroll container with a fixed bottom save action', () => {
   const cssSource = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 
   assert.match(cssSource, /--app-height:\s*100dvh/);
@@ -160,9 +160,11 @@ test('mobile add page uses one scroll container with a sticky save action', () =
   assert.match(cssSource, /--mobile-save-height:\s*48px/);
   assert.match(cssSource, /--add-content-height/);
   assert.match(cssSource, /body\.is-add-page #btn-save/);
-  assert.doesNotMatch(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*position:\s*fixed/);
-  assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*position:\s*sticky/);
+  assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*position:\s*fixed/);
+  assert.doesNotMatch(cssSource, /body\.is-add-page #btn-save\s*\{[^}]*position:\s*sticky/);
   assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*bottom:\s*calc\(var\(--mobile-nav-height\)/);
+  assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*left:\s*0\.75rem/);
+  assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*right:\s*0\.75rem/);
   assert.match(cssSource, /height:\s*var\(--mobile-save-height\)/);
   assert.match(cssSource, /flex:\s*0 0 var\(--mobile-save-height\)/);
   assert.match(cssSource, /body\.is-add-page #tx-options-card/);
