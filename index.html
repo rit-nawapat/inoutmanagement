@@ -259,13 +259,16 @@
 
                 <section id="page-add" class="hidden flex-col w-full max-w-6xl mx-auto flex-1 min-h-0 overflow-hidden pb-1 lg:pb-6">
                     <div class="flex flex-col gap-1.5 lg:gap-6 flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(380px,440px)_minmax(0,1fr)] lg:items-start">
-                        <div id="tx-calculator-column" class="flex flex-col gap-1.5 lg:gap-3 lg:sticky lg:top-0 flex-1 min-h-0">
+                        <div id="tx-calculator-column" class="flex flex-col gap-1.5 lg:gap-3 lg:sticky lg:top-0 shrink-0 lg:flex-1 lg:min-h-0">
                         <div class="bg-white rounded-2xl border border-slate-200 px-2.5 py-1.5 lg:px-5 lg:py-4 shrink-0">
                             <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
+                                <div class="min-w-0 flex-1">
                                     <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">ยอดที่ต้องการบันทึก</span>
+                                    <input id="display-input" type="text" inputmode="decimal" 
+                                        class="md:hidden w-full bg-transparent outline-none text-[28px] leading-none font-extrabold text-slate-800 tracking-tight mt-0.5" 
+                                        value="0">
                                     <div id="display"
-                                        class="text-[28px] leading-none lg:text-5xl font-extrabold text-slate-800 tracking-tight truncate mt-0.5">
+                                        class="hidden md:block text-[28px] leading-none lg:text-5xl font-extrabold text-slate-800 tracking-tight truncate mt-0.5">
                                         0</div>
                                 </div>
                                 <div class="bg-slate-50 text-slate-300 rounded-xl p-1.5 shrink-0"><i data-lucide="calculator" class="w-4 h-4"></i></div>
@@ -275,7 +278,7 @@
                             </div>
                         </div>
 
-                        <div class="bg-white rounded-2xl border border-slate-200 p-1.5 lg:p-4 flex flex-col flex-1 min-h-0">
+                        <div class="hidden md:flex bg-white rounded-2xl border border-slate-200 p-1.5 lg:p-4 flex-col flex-1 min-h-0">
                             <div class="flex flex-col gap-1.5 flex-1 min-h-0">
                                 <div class="flex items-center justify-between shrink-0">
                                 <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน</span>
@@ -311,7 +314,7 @@
                         </div>
                         </div>
 
-                        <div id="tx-options-card" class="bg-white rounded-2xl border border-slate-200 p-2.5 lg:p-5 flex flex-col gap-2 lg:gap-5 shrink-0 lg:flex-1 lg:min-h-0 overflow-y-auto no-scrollbar">
+                        <div id="tx-options-card" class="bg-white rounded-2xl border border-slate-200 p-2.5 lg:p-5 flex flex-col gap-2 lg:gap-5 flex-1 min-h-0 overflow-y-auto no-scrollbar">
                             <div class="flex items-center justify-between gap-3">
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ</span>
                                 <div class="bg-slate-100 p-0.5 rounded-full flex w-28 shrink-0">
