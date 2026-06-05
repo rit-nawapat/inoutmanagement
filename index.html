@@ -257,8 +257,8 @@
                     </div>
                 </section>
 
-                <section id="page-add" class="hidden flex-col w-full max-w-6xl mx-auto flex-1 min-h-0 overflow-hidden pb-1 lg:pb-6">
-                    <div class="flex flex-col gap-1.5 lg:gap-6 flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(380px,440px)_minmax(0,1fr)] lg:items-start">
+                <section id="page-add" class="hidden flex-col w-full max-w-6xl mx-auto flex-1 min-h-0 max-md:overflow-y-auto md:overflow-hidden pb-1 lg:pb-6 max-md:no-scrollbar">
+                    <div class="flex flex-col gap-1.5 lg:gap-6 max-md:flex-none md:flex-1 min-h-0 lg:grid lg:grid-cols-[minmax(380px,440px)_minmax(0,1fr)] lg:items-start">
                         <div id="tx-calculator-column" class="flex flex-col gap-1.5 lg:gap-3 lg:sticky lg:top-0 shrink-0 lg:flex-1 lg:min-h-0">
                         <div class="max-md:bg-indigo-50/50 max-md:border-none md:bg-white rounded-2xl border border-slate-200 px-4 py-3 md:px-5 md:py-4 shrink-0">
                             <div class="flex items-start justify-between gap-3">
@@ -314,7 +314,7 @@
                         </div>
                         </div>
 
-                        <div id="tx-options-card" class="max-md:bg-transparent max-md:border-none max-md:p-0 md:bg-white rounded-2xl md:border md:border-slate-200 p-2.5 md:p-5 flex flex-col gap-4 md:gap-5 flex-1 min-h-0 overflow-y-auto no-scrollbar">
+                        <div id="tx-options-card" class="max-md:bg-transparent max-md:border-none max-md:p-0 md:bg-white rounded-2xl md:border md:border-slate-200 p-2.5 md:p-5 flex flex-col gap-4 md:gap-5 max-md:flex-none md:flex-1 max-md:min-h-fit md:min-h-0 max-md:overflow-visible md:overflow-y-auto no-scrollbar">
                             <div class="flex items-center justify-between gap-3">
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ</span>
                                 <div class="bg-slate-100 p-0.5 rounded-full flex w-28 shrink-0">
@@ -365,7 +365,7 @@
                             </div>
 
                             <button id="btn-save" onclick="saveTransaction()"
-                            class="w-full bg-slate-900 text-white font-bold py-3 lg:py-4 rounded-2xl text-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-800 transition-colors mt-auto shrink-0 mb-1 lg:mb-0">
+                            class="w-full bg-slate-900 text-white font-bold py-3 lg:py-4 rounded-2xl text-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-800 transition-colors max-md:mt-4 md:mt-auto shrink-0 mb-1 lg:mb-0">
                             <i data-lucide="check-circle" class="w-4 h-4"></i><span
                                 id="save-text">บันทึกรายการ</span>
                         </button>
