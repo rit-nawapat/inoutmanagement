@@ -607,12 +607,14 @@ function setPullRefreshIndicator({ visible = false, state = 'idle', text = '' } 
     if (!indicator) return;
     if (!visible) {
         indicator.replaceChildren();
+        indicator.dataset.visible = 'false';
         indicator.classList.add('hidden');
         indicator.classList.remove('inline-flex', 'items-center', 'justify-center', 'justify-start', 'whitespace-nowrap');
         indicator.style.display = 'none';
         return;
     }
 
+    indicator.dataset.visible = 'true';
     indicator.style.display = 'inline-flex';
     indicator.classList.remove('hidden');
     renderSyncStatusBadge(indicator, { state, text });

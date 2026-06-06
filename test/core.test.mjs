@@ -104,6 +104,7 @@ test('debt history UI uses a bounded scroll panel with richer row structure', ()
 test('mobile add page uses a compact one-page layout and removes OCR controls', () => {
   const appSource = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
   const htmlSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const styleSource = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
   const catalogSource = readFileSync(new URL('../src/catalog-service.mjs', import.meta.url), 'utf8');
   const budgetSource = readFileSync(new URL('../src/budget-service.mjs', import.meta.url), 'utf8');
 
@@ -127,6 +128,9 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /id="sync-status-mobile"/);
   assert.match(htmlSource, /id="sync-status-desktop"/);
   assert.match(htmlSource, /id="pull-refresh-indicator"/);
+  assert.match(htmlSource, /id="pull-refresh-indicator" data-visible="false"/);
+  assert.match(styleSource, /#pull-refresh-indicator\[data-visible="false"\]/);
+  assert.match(styleSource, /display:\s*none\s*!important/);
   assert.match(htmlSource, /id="category-grid-scroll"/);
   assert.match(htmlSource, /id="account-grid-scroll"/);
   assert.match(htmlSource, /id="tx-budget-group-grid-scroll"/);
@@ -143,6 +147,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(appSource, /--app-height/);
   assert.match(appSource, /--content-height/);
   assert.match(appSource, /visualViewport/);
+  assert.match(appSource, /indicator\.dataset\.visible = 'false'/);
   assert.match(appSource, /classList\.toggle\('is-add-page', pageId === 'add'\)/);
   assert.match(appSource, /function\s+openAccountSelectorModal\s*\(/);
   assert.match(appSource, /function\s+openBudgetSelectorModal\s*\(/);
