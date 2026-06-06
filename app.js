@@ -555,6 +555,54 @@ function isStandalonePwa() {
     );
 }
 
+function renderSyncStatusBadge(target, { state = 'idle', text = '' } = {}) {
+    if (!target) return;
+
+    const presets = {
+        syncing: {
+            icon: 'loader-circle',
+            iconClass: 'animate-spin text-indigo-500',
+            textClass: 'text-indigo-500',
+            fallbackText: 'กำลังรีเฟรช...',
+        },
+        queued: {
+            icon: 'clock-3',
+            iconClass: 'text-amber-500',
+            textClass: 'text-amber-500',
+            fallbackText: 'รอซิงค์',
+        },
+        synced: {
+            icon: 'check-circle-2',
+            iconClass: 'text-emerald-500',
+            textClass: 'text-emerald-500',
+            fallbackText: 'ซิงค์สำเร็จ',
+        },
+        idle: {
+            icon: 'refresh-cw',
+            iconClass: 'text-slate-400',
+            textClass: 'text-slate-400',
+            fallbackText: 'พร้อมรีเฟรช',
+        },
+    };
+
+    const preset = presets[state] || presets.idle;
+    target.innerHTML = `<i data-lucide="${preset.icon}" class="w-3 h-3 ${preset.iconClass}"></i><span class="${preset.textClass}">${text || preset.fallbackText}</span>`;
+    lucide.createIcons();
+}
+
+function setPullRefreshIndicator({ visible = false, state = 'idle', text = '' } = {}) {
+    const indicator = document.getElementById('pull-refresh-indicator');
+    if (!indicator) return;
+    if (!visible) {
+        indicator.classList.add('hidden');
+        indicator.innerHTML = '';
+        return;
+    }
+
+    indicator.classList.remove('hidden');
+    renderSyncStatusBadge(indicator, { state, text });
+}
+
 const mainTouchZone = document.getElementById('main-touch-zone');
 if (mainTouchZone) {
     mainTouchZone.addEventListener('touchstart', (e) => {
@@ -583,13 +631,7 @@ function setupStandalonePullToRefresh() {
     let isRefreshing = false;
 
     const canUsePullToRefresh = () => window.innerWidth <= 767 && isStandalonePwa();
-    const resetPullVisual = () => {
-        mainContent.style.transition = 'transform 180ms ease';
-        mainContent.style.transform = 'translateY(0px)';
-        window.setTimeout(() => {
-            mainContent.style.transition = '';
-        }, 180);
-    };
+    const resetPullVisual = () => setPullRefreshIndicator({ visible: false });
 
     mainContent.addEventListener('touchstart', (event) => {
         if (!canUsePullToRefresh() || isRefreshing) return;
@@ -610,8 +652,11 @@ function setupStandalonePullToRefresh() {
 
         isPulling = true;
         pullDistance = Math.min(88, deltaY * 0.42);
-        mainContent.style.transition = 'none';
-        mainContent.style.transform = `translateY(${pullDistance}px)`;
+        setPullRefreshIndicator({
+            visible: true,
+            state: pullDistance >= 56 ? 'queued' : 'idle',
+            text: pullDistance >= 56 ? 'ปล่อยเพื่อรีเฟรช' : 'ดึงลงเพื่อรีเฟรช',
+        });
         event.preventDefault();
     }, { passive: false });
 
@@ -631,8 +676,7 @@ function setupStandalonePullToRefresh() {
         }
 
         isRefreshing = true;
-        mainContent.style.transition = 'transform 180ms ease';
-        mainContent.style.transform = 'translateY(32px)';
+        setPullRefreshIndicator({ visible: true, state: 'syncing', text: 'กำลังรีเฟรช...' });
 
         try {
             await syncDataFromSheet({ force: true });
@@ -1104,24 +1148,14 @@ function updateSyncStatusUI() {
     
     const desktopEl = document.getElementById('sync-status-desktop');
     const mobileEl = document.getElementById('sync-status-mobile');
-    if (!desktopEl || !mobileEl) return;
+    if (!desktopEl && !mobileEl) return;
     
     if (count > 0) {
-        const dotHtml = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span><span>รอซิงค์ ${count} รายการ</span>`;
-        desktopEl.innerHTML = dotHtml;
-        desktopEl.className = "flex items-center space-x-1.5 text-[10px] text-amber-400 font-bold mt-0.5";
-        
-        const mobileDotHtml = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span><span>รอซิงค์ ${count}</span>`;
-        mobileEl.innerHTML = mobileDotHtml;
-        mobileEl.className = "flex items-center space-x-1 text-[9px] text-amber-400 font-bold mt-0.5";
+        renderSyncStatusBadge(desktopEl, { state: 'queued', text: `รอซิงค์ ${count} รายการ` });
+        renderSyncStatusBadge(mobileEl, { state: 'queued', text: `รอซิงค์ ${count}` });
     } else {
-        const dotHtml = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>ซิงค์สำเร็จ</span>`;
-        desktopEl.innerHTML = dotHtml;
-        desktopEl.className = "flex items-center space-x-1.5 text-[10px] text-emerald-400 font-bold mt-0.5";
-        
-        const mobileDotHtml = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>ซิงค์สำเร็จ</span>`;
-        mobileEl.innerHTML = mobileDotHtml;
-        mobileEl.className = "flex items-center space-x-1 text-[9px] text-emerald-400 font-bold mt-0.5";
+        renderSyncStatusBadge(desktopEl, { state: 'synced', text: 'ซิงค์สำเร็จ' });
+        renderSyncStatusBadge(mobileEl, { state: 'synced', text: 'ซิงค์สำเร็จ' });
     }
 }
 
@@ -1230,15 +1264,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     stateStore.subscribe('sync:started', () => {
-         const desktopEl = document.getElementById('sync-status-desktop');
-         const mobileEl = document.getElementById('sync-status-mobile');
-         if (desktopEl && mobileEl) {
-             desktopEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span><span>กำลังซิงค์...</span>`;
-             desktopEl.className = "flex items-center space-x-1.5 text-[10px] text-indigo-400 font-bold mt-0.5";
-             
-             mobileEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span><span>กำลังซิงค์...</span>`;
-             mobileEl.className = "flex items-center space-x-1 text-[9px] text-indigo-400 font-bold mt-0.5";
-         }
+         renderSyncStatusBadge(document.getElementById('sync-status-desktop'), { state: 'syncing', text: 'กำลังรีเฟรช...' });
+         renderSyncStatusBadge(document.getElementById('sync-status-mobile'), { state: 'syncing', text: 'กำลังรีเฟรช...' });
     });
 
     stateStore.subscribe('sync:failed', () => {

@@ -49,13 +49,19 @@ test('app declares recurring handlers before exposing them globally', () => {
   }
 
   assert.match(source, /function\s+setupStandalonePullToRefresh\s*\(/);
+  assert.match(source, /function\s+renderSyncStatusBadge\s*\(/);
+  assert.match(source, /function\s+setPullRefreshIndicator\s*\(/);
   assert.match(source, /display-mode:\s*standalone/);
   assert.match(source, /navigator\??\.standalone/);
   assert.match(source, /syncDataFromSheet\(\{\s*force:\s*true\s*\}\)/);
   assert.match(source, /showToast\('รีเฟรชข้อมูลล่าสุดแล้ว', 'success'\)/);
+  assert.match(source, /ปล่อยเพื่อรีเฟรช/);
+  assert.match(source, /ดึงลงเพื่อรีเฟรช/);
+  assert.match(source, /กำลังรีเฟรช/);
   assert.match(source, /renderRecurringListFn:\s*renderRecurringList/);
   assert.match(source, /updateRecurringSummaryFn:\s*updateRecurringSummary/);
   assert.match(source, /budgetGroups:\s*allBudgetGroups/);
+  assert.doesNotMatch(source, /mainContent\.style\.transform\s*=/);
 });
 
 test('profile selection includes a dedicated loading block and app toggles it during init', () => {
@@ -118,6 +124,9 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /id="tx-date-compact-row"/);
   assert.match(htmlSource, /id="mobile-app-shell"/);
   assert.match(htmlSource, /id="mobile-app-header"/);
+  assert.match(htmlSource, /id="sync-status-mobile"/);
+  assert.match(htmlSource, /id="sync-status-desktop"/);
+  assert.match(htmlSource, /id="pull-refresh-indicator"/);
   assert.match(htmlSource, /id="category-grid-scroll"/);
   assert.match(htmlSource, /id="account-grid-scroll"/);
   assert.match(htmlSource, /id="tx-budget-group-grid-scroll"/);
