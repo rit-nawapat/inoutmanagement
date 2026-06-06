@@ -586,8 +586,8 @@ function renderSyncStatusBadge(target, { state = 'idle', text = '' } = {}) {
     };
 
     const preset = presets[state] || presets.idle;
-    target.classList.add('inline-flex', 'items-center', 'justify-center', 'whitespace-nowrap');
-    target.innerHTML = `<span class="inline-flex items-center gap-1 whitespace-nowrap"><i data-lucide="${preset.icon}" class="w-3 h-3 shrink-0 ${preset.iconClass}"></i><span class="leading-none ${preset.textClass}">${text || preset.fallbackText}</span></span>`;
+    target.classList.add('inline-flex', 'items-center', 'justify-start', 'whitespace-nowrap');
+    target.innerHTML = `<span class="inline-flex items-center justify-start gap-1 whitespace-nowrap"><i data-lucide="${preset.icon}" class="w-3 h-3 shrink-0 ${preset.iconClass}"></i><span class="leading-none text-left ${preset.textClass}">${text || preset.fallbackText}</span></span>`;
     lucide.createIcons();
 }
 
