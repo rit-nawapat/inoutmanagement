@@ -587,6 +587,7 @@ function renderSyncStatusBadge(target, { state = 'idle', text = '' } = {}) {
 
     const preset = presets[state] || presets.idle;
     const justifyClass = target.id === 'pull-refresh-indicator' ? 'justify-center' : 'justify-start';
+    target.classList.remove('justify-center', 'justify-start');
     target.classList.add('inline-flex', 'items-center', justifyClass, 'whitespace-nowrap');
     target.replaceChildren();
 
@@ -605,11 +606,14 @@ function setPullRefreshIndicator({ visible = false, state = 'idle', text = '' } 
     const indicator = document.getElementById('pull-refresh-indicator');
     if (!indicator) return;
     if (!visible) {
+        indicator.replaceChildren();
         indicator.classList.add('hidden');
-        indicator.innerHTML = '';
+        indicator.classList.remove('inline-flex', 'items-center', 'justify-center', 'justify-start', 'whitespace-nowrap');
+        indicator.style.display = 'none';
         return;
     }
 
+    indicator.style.display = 'inline-flex';
     indicator.classList.remove('hidden');
     renderSyncStatusBadge(indicator, { state, text });
 }
