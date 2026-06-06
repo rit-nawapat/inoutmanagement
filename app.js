@@ -586,8 +586,18 @@ function renderSyncStatusBadge(target, { state = 'idle', text = '' } = {}) {
     };
 
     const preset = presets[state] || presets.idle;
-    target.classList.add('inline-flex', 'items-center', 'justify-start', 'whitespace-nowrap');
-    target.innerHTML = `<span class="inline-flex items-center justify-start gap-1 whitespace-nowrap"><i data-lucide="${preset.icon}" class="w-3 h-3 shrink-0 ${preset.iconClass}"></i><span class="leading-none text-left ${preset.textClass}">${text || preset.fallbackText}</span></span>`;
+    const justifyClass = target.id === 'pull-refresh-indicator' ? 'justify-center' : 'justify-start';
+    target.classList.add('inline-flex', 'items-center', justifyClass, 'whitespace-nowrap');
+    target.replaceChildren();
+
+    const wrapper = createEl('div', { className: `flex items-center ${justifyClass} gap-1 whitespace-nowrap min-w-max` });
+    wrapper.appendChild(createIcon(preset.icon, `w-3 h-3 shrink-0 ${preset.iconClass}`));
+    wrapper.appendChild(createEl('span', {
+        className: `leading-none text-left whitespace-nowrap ${preset.textClass}`,
+        text: text || preset.fallbackText,
+    }));
+
+    target.appendChild(wrapper);
     lucide.createIcons();
 }
 
