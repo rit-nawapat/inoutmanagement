@@ -1,6 +1,7 @@
 import { createApiClient } from './src/api-client.mjs';
 import { stateStore } from './src/state-store.mjs';
 import { initSyncQueue, syncQueueInstance } from './src/sync-queue.mjs';
+import { createRefreshController } from './src/refresh-controller.mjs';
 import {
     loadCurrentProfileId,
     loadSavedProfiles,
@@ -577,6 +578,12 @@ function renderSyncStatusBadge(target, { state = 'idle', text = '' } = {}) {
             textClass: 'text-emerald-500',
             fallbackText: 'ซิงค์สำเร็จ',
         },
+        error: {
+            icon: 'alert-circle',
+            iconClass: 'text-rose-500',
+            textClass: 'text-rose-500',
+            fallbackText: 'รีเฟรชไม่สำเร็จ',
+        },
         idle: {
             icon: 'refresh-cw',
             iconClass: 'text-slate-400',
@@ -602,22 +609,30 @@ function renderSyncStatusBadge(target, { state = 'idle', text = '' } = {}) {
     lucide.createIcons();
 }
 
-function setPullRefreshIndicator({ visible = false, state = 'idle', text = '' } = {}) {
+const pullRefreshCopy = {
+    pulling: { state: 'idle', text: 'ดึงลงเพื่อรีเฟรช' },
+    ready: { state: 'queued', text: 'ปล่อยเพื่อรีเฟรช' },
+    refreshing: { state: 'syncing', text: 'กำลังรีเฟรช...' },
+    error: { state: 'error', text: 'รีเฟรชไม่สำเร็จ' },
+};
+
+function renderPullRefreshState(refreshState = { phase: 'idle', visible: false }) {
     const indicator = document.getElementById('pull-refresh-indicator');
     if (!indicator) return;
-    if (!visible) {
+
+    const isVisible = Boolean(refreshState.visible);
+    indicator.dataset.refreshPhase = refreshState.phase || 'idle';
+    indicator.classList.toggle('is-visible', isVisible);
+    indicator.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+
+    if (!isVisible) {
         indicator.replaceChildren();
-        indicator.dataset.visible = 'false';
-        indicator.classList.add('hidden');
         indicator.classList.remove('inline-flex', 'items-center', 'justify-center', 'justify-start', 'whitespace-nowrap');
-        indicator.style.display = 'none';
         return;
     }
 
-    indicator.dataset.visible = 'true';
-    indicator.style.display = 'inline-flex';
-    indicator.classList.remove('hidden');
-    renderSyncStatusBadge(indicator, { state, text });
+    const copy = pullRefreshCopy[refreshState.phase] || pullRefreshCopy.pulling;
+    renderSyncStatusBadge(indicator, copy);
 }
 
 const mainTouchZone = document.getElementById('main-touch-zone');
@@ -638,77 +653,23 @@ if (mainTouchZone) {
     console.error("Warning: Element #main-touch-zone not found in DOM.");
 }
 
-function setupStandalonePullToRefresh() {
+function setupMobileRefreshController() {
     const mainContent = document.getElementById('main-content-scroll');
     if (!mainContent) return;
 
-    let startY = 0;
-    let pullDistance = 0;
-    let isPulling = false;
-    let isRefreshing = false;
-
-    const canUsePullToRefresh = () => window.innerWidth <= 767 && isStandalonePwa();
-    const resetPullVisual = () => setPullRefreshIndicator({ visible: false });
-
-    mainContent.addEventListener('touchstart', (event) => {
-        if (!canUsePullToRefresh() || isRefreshing) return;
-        if (mainContent.scrollTop > 0) return;
-        if (event.target.closest('button, input, textarea, select, dialog, [role="dialog"]')) return;
-        startY = event.touches[0]?.clientY || 0;
-        pullDistance = 0;
-        isPulling = false;
-    }, { passive: true });
-
-    mainContent.addEventListener('touchmove', (event) => {
-        if (!canUsePullToRefresh() || isRefreshing || !startY) return;
-        if (mainContent.scrollTop > 0) return;
-
-        const currentY = event.touches[0]?.clientY || 0;
-        const deltaY = currentY - startY;
-        if (deltaY <= 0) return;
-
-        isPulling = true;
-        pullDistance = Math.min(88, deltaY * 0.42);
-        setPullRefreshIndicator({
-            visible: true,
-            state: pullDistance >= 56 ? 'queued' : 'idle',
-            text: pullDistance >= 56 ? 'ปล่อยเพื่อรีเฟรช' : 'ดึงลงเพื่อรีเฟรช',
-        });
-        event.preventDefault();
-    }, { passive: false });
-
-    mainContent.addEventListener('touchend', async () => {
-        if (!isPulling) {
-            startY = 0;
-            return;
-        }
-
-        const shouldRefresh = pullDistance >= 56;
-        startY = 0;
-        isPulling = false;
-
-        if (!shouldRefresh) {
-            resetPullVisual();
-            return;
-        }
-
-        isRefreshing = true;
-        setPullRefreshIndicator({ visible: true, state: 'syncing', text: 'กำลังรีเฟรช...' });
-
-        try {
+    createRefreshController({
+        scrollElement: mainContent,
+        canRefresh: () => window.innerWidth <= 767 && isStandalonePwa(),
+        refresh: async () => {
             await syncDataFromSheet({ force: true });
             showToast('รีเฟรชข้อมูลล่าสุดแล้ว', 'success');
-        } catch (error) {
+        },
+        onStateChange: renderPullRefreshState,
+        onError: (error) => {
             console.error('Pull-to-refresh failed:', error);
             showToast('รีเฟรชไม่สำเร็จ', 'error');
-        } finally {
-            pullDistance = 0;
-            resetPullVisual();
-            window.setTimeout(() => {
-                isRefreshing = false;
-            }, 180);
-        }
-    }, { passive: true });
+        },
+    });
 }
 
 function switchPage(pageId) {
@@ -1184,7 +1145,7 @@ const display = document.getElementById('display');
 document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
     setupViewportMetricListeners();
-    setupStandalonePullToRefresh();
+    setupMobileRefreshController();
     
     const txDate = document.getElementById('tx-date');
     if (txDate) {

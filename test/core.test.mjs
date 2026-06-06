@@ -31,6 +31,144 @@ import { saveTransactionFlow, syncDataFromSheetFlow } from '../src/flow-service.
 import { resolveConfirmDialog } from '../src/confirm-dialog.mjs';
 import { cancelRecurringPayment, payRecurringItem } from '../src/recurring-service.mjs';
 import { SyncQueueManager } from '../src/sync-queue.mjs';
+import { createRefreshController } from '../src/refresh-controller.mjs';
+
+class FakeTouchElement {
+  constructor() {
+    this.scrollTop = 0;
+    this.listeners = new Map();
+  }
+
+  addEventListener(type, listener) {
+    this.listeners.set(type, listener);
+  }
+
+  removeEventListener(type, listener) {
+    if (this.listeners.get(type) === listener) {
+      this.listeners.delete(type);
+    }
+  }
+
+  emit(type, event = {}) {
+    const listener = this.listeners.get(type);
+    if (listener) return listener(event);
+    return undefined;
+  }
+}
+
+function makeTouchEvent(clientY) {
+  return {
+    touches: [{ clientY }],
+    target: { closest: () => false },
+    defaultPrevented: false,
+    preventDefault() {
+      this.defaultPrevented = true;
+    },
+  };
+}
+
+test('refresh controller runs a pull refresh once and returns to idle', async () => {
+  const element = new FakeTouchElement();
+  const states = [];
+  let refreshCalls = 0;
+  let finishRefresh;
+  const refreshDone = new Promise((resolve) => {
+    finishRefresh = resolve;
+  });
+
+  createRefreshController({
+    scrollElement: element,
+    canRefresh: () => true,
+    refresh: async () => {
+      refreshCalls += 1;
+      await refreshDone;
+    },
+    onStateChange: (state) => states.push(state),
+    threshold: 50,
+    resetDelayMs: 0,
+  });
+
+  element.emit('touchstart', makeTouchEvent(10));
+  const moveEvent = makeTouchEvent(160);
+  element.emit('touchmove', moveEvent);
+
+  assert.equal(moveEvent.defaultPrevented, true);
+  assert.equal(states.at(-1).phase, 'ready');
+  assert.equal(states.at(-1).visible, true);
+
+  const refreshTask = element.emit('touchend');
+  await Promise.resolve();
+
+  assert.equal(refreshCalls, 1);
+  assert.equal(states.at(-1).phase, 'refreshing');
+  assert.equal(states.at(-1).visible, true);
+
+  finishRefresh();
+  await refreshTask;
+
+  assert.equal(states.at(-1).phase, 'idle');
+  assert.equal(states.at(-1).visible, false);
+});
+
+test('refresh controller cancels short pulls without refreshing', async () => {
+  const element = new FakeTouchElement();
+  const states = [];
+  let refreshCalls = 0;
+
+  createRefreshController({
+    scrollElement: element,
+    canRefresh: () => true,
+    refresh: async () => {
+      refreshCalls += 1;
+    },
+    onStateChange: (state) => states.push(state),
+    threshold: 50,
+    resetDelayMs: 0,
+  });
+
+  element.emit('touchstart', makeTouchEvent(10));
+  element.emit('touchmove', makeTouchEvent(80));
+  await element.emit('touchend');
+
+  assert.equal(refreshCalls, 0);
+  assert.equal(states.at(-1).phase, 'idle');
+  assert.equal(states.at(-1).visible, false);
+});
+
+test('refresh controller ignores new pulls while a refresh is running', async () => {
+  const element = new FakeTouchElement();
+  let refreshCalls = 0;
+  let finishRefresh;
+  const refreshDone = new Promise((resolve) => {
+    finishRefresh = resolve;
+  });
+
+  createRefreshController({
+    scrollElement: element,
+    canRefresh: () => true,
+    refresh: async () => {
+      refreshCalls += 1;
+      await refreshDone;
+    },
+    onStateChange: () => {},
+    threshold: 50,
+    resetDelayMs: 0,
+  });
+
+  element.emit('touchstart', makeTouchEvent(0));
+  element.emit('touchmove', makeTouchEvent(160));
+  const firstRefresh = element.emit('touchend');
+  await Promise.resolve();
+
+  element.emit('touchstart', makeTouchEvent(0));
+  element.emit('touchmove', makeTouchEvent(160));
+  await element.emit('touchend');
+
+  assert.equal(refreshCalls, 1);
+
+  finishRefresh();
+  await firstRefresh;
+});
 
 test('app declares recurring handlers before exposing them globally', () => {
   const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
@@ -48,9 +186,12 @@ test('app declares recurring handlers before exposing them globally', () => {
     assert.match(source, new RegExp(`function\\s+${handler}\\s*\\(`));
   }
 
-  assert.match(source, /function\s+setupStandalonePullToRefresh\s*\(/);
+  assert.match(source, /createRefreshController/);
+  assert.match(source, /function\s+setupMobileRefreshController\s*\(/);
+  assert.match(source, /function\s+renderPullRefreshState\s*\(/);
   assert.match(source, /function\s+renderSyncStatusBadge\s*\(/);
-  assert.match(source, /function\s+setPullRefreshIndicator\s*\(/);
+  assert.doesNotMatch(source, /function\s+setPullRefreshIndicator\s*\(/);
+  assert.doesNotMatch(source, /function\s+setupStandalonePullToRefresh\s*\(/);
   assert.match(source, /display-mode:\s*standalone/);
   assert.match(source, /navigator\??\.standalone/);
   assert.match(source, /syncDataFromSheet\(\{\s*force:\s*true\s*\}\)/);
@@ -128,9 +269,11 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /id="sync-status-mobile"/);
   assert.match(htmlSource, /id="sync-status-desktop"/);
   assert.match(htmlSource, /id="pull-refresh-indicator"/);
-  assert.match(htmlSource, /id="pull-refresh-indicator" data-visible="false"/);
-  assert.match(styleSource, /#pull-refresh-indicator\[data-visible="false"\]/);
-  assert.match(styleSource, /display:\s*none\s*!important/);
+  assert.match(htmlSource, /id="pull-refresh-indicator" aria-hidden="true"/);
+  assert.match(styleSource, /#pull-refresh-indicator\s*\{/);
+  assert.match(styleSource, /#pull-refresh-indicator\.is-visible/);
+  assert.match(styleSource, /visibility:\s*hidden/);
+  assert.match(styleSource, /opacity:\s*0/);
   assert.match(htmlSource, /id="category-grid-scroll"/);
   assert.match(htmlSource, /id="account-grid-scroll"/);
   assert.match(htmlSource, /id="tx-budget-group-grid-scroll"/);
@@ -147,7 +290,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(appSource, /--app-height/);
   assert.match(appSource, /--content-height/);
   assert.match(appSource, /visualViewport/);
-  assert.match(appSource, /indicator\.dataset\.visible = 'false'/);
+  assert.match(appSource, /indicator\.classList\.toggle\('is-visible'/);
   assert.match(appSource, /classList\.toggle\('is-add-page', pageId === 'add'\)/);
   assert.match(appSource, /function\s+openAccountSelectorModal\s*\(/);
   assert.match(appSource, /function\s+openBudgetSelectorModal\s*\(/);
