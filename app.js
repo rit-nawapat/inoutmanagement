@@ -1361,9 +1361,8 @@ function initCupertinoPickerWheels(currentDate) {
     const wheelDate = document.getElementById('wheel-date');
     const wheelHour = document.getElementById('wheel-hour');
     const wheelMinute = document.getElementById('wheel-minute');
-    const wheelAmpm = document.getElementById('wheel-ampm');
     
-    if (!wheelDate || !wheelHour || !wheelMinute || !wheelAmpm) return;
+    if (!wheelDate || !wheelHour || !wheelMinute) return;
     
     wheelDate.innerHTML = '';
     pickerDates = [];
@@ -1407,7 +1406,7 @@ function initCupertinoPickerWheels(currentDate) {
     }
     
     wheelHour.innerHTML = '';
-    const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+    const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
     hours.forEach(h => {
         const el = document.createElement('div');
         el.className = 'h-[44px] flex items-center justify-center snap-center shrink-0 transition-all duration-100';
@@ -1415,12 +1414,7 @@ function initCupertinoPickerWheels(currentDate) {
         wheelHour.appendChild(el);
     });
     
-    let currentHour24 = currentDate.getHours();
-    let isPM = currentHour24 >= 12;
-    let currentHour12 = currentHour24 % 12;
-    if (currentHour12 === 0) currentHour12 = 12;
-    let activeHourIndex = currentHour12 - 1;
-    let activeAmpmIndex = isPM ? 1 : 0;
+    let activeHourIndex = currentDate.getHours();
     
     wheelMinute.innerHTML = '';
     const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
@@ -1432,16 +1426,8 @@ function initCupertinoPickerWheels(currentDate) {
     });
     let activeMinuteIndex = currentDate.getMinutes();
     
-    wheelAmpm.innerHTML = '';
-    ['AM', 'PM'].forEach(ap => {
-        const el = document.createElement('div');
-        el.className = 'h-[44px] flex items-center justify-center snap-center shrink-0 transition-all duration-100';
-        el.innerText = ap;
-        wheelAmpm.appendChild(el);
-    });
-    
-    setupWheelScroll([wheelDate, wheelHour, wheelMinute, wheelAmpm], 
-                     [activeDateIndex, activeHourIndex, activeMinuteIndex, activeAmpmIndex]);
+    setupWheelScroll([wheelDate, wheelHour, wheelMinute], 
+                     [activeDateIndex, activeHourIndex, activeMinuteIndex]);
 }
 
 function setupWheelScroll(columns, activeIndices) {
@@ -1484,25 +1470,15 @@ function closeCupertinoDatePicker(saveChanges = false) {
         const wheelDate = document.getElementById('wheel-date');
         const wheelHour = document.getElementById('wheel-hour');
         const wheelMinute = document.getElementById('wheel-minute');
-        const wheelAmpm = document.getElementById('wheel-ampm');
         
-        if (wheelDate && wheelHour && wheelMinute && wheelAmpm) {
+        if (wheelDate && wheelHour && wheelMinute) {
             const dateIdx = Math.round(wheelDate.scrollTop / 44);
             const hourIdx = Math.round(wheelHour.scrollTop / 44);
             const minuteIdx = Math.round(wheelMinute.scrollTop / 44);
-            const ampmIdx = Math.round(wheelAmpm.scrollTop / 44);
             
             const selectedDate = pickerDates[dateIdx] || new Date();
-            const selectedHour12 = hourIdx + 1;
+            const selectedHour24 = Math.max(0, Math.min(23, hourIdx));
             const selectedMinute = minuteIdx;
-            const isPM = ampmIdx === 1;
-            
-            let selectedHour24 = selectedHour12;
-            if (isPM) {
-                if (selectedHour12 < 12) selectedHour24 += 12;
-            } else {
-                if (selectedHour12 === 12) selectedHour24 = 0;
-            }
             
             const finalDate = new Date(selectedDate);
             finalDate.setHours(selectedHour24);

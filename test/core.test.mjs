@@ -258,6 +258,8 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /md:hidden/);
   assert.match(htmlSource, /hidden md:block/);
   assert.match(htmlSource, /เลือกวันเวลา/);
+  assert.doesNotMatch(htmlSource, /wheel-ampm/);
+  assert.doesNotMatch(htmlSource, /AM\/PM Column/);
   assert.match(htmlSource, /เลือกกระเป๋า/);
   assert.match(htmlSource, /id="account-grid"/);
   assert.match(htmlSource, /id="tx-budget-group-grid"/);
@@ -296,6 +298,10 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(appSource, /function\s+openBudgetSelectorModal\s*\(/);
   assert.match(appSource, /function\s+updateCompactSelectionSummary\s*\(/);
   assert.match(appSource, /if\s*\(pageId === 'add'\)\s*scrollMainContentToTop\(\)/);
+  assert.match(appSource, /Array\.from\(\{\s*length:\s*24\s*\}/);
+  assert.doesNotMatch(appSource, /selectedHour12/);
+  assert.doesNotMatch(appSource, /wheelAmpm/);
+  assert.doesNotMatch(appSource, /\['AM', 'PM'\]/);
   assert.doesNotMatch(appSource, /window\.processSlipOCR\s*=/);
   assert.doesNotMatch(appSource, /function\s+toggleAddDetails\s*\(/);
   assert.match(catalogSource, /max-md:py-1/);
