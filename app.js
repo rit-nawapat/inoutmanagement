@@ -26,7 +26,7 @@ import {
     renderAccounts as renderAccountsService,
     renderCategories as renderCategoriesService,
 } from './src/catalog-service.mjs';
-import { setButtonLoading, setDialogConfirmLoading } from './src/button-helpers.mjs';
+import { pulseButtonComplete, setButtonLoading, setDialogConfirmLoading } from './src/button-helpers.mjs';
 import { applyConfirmDialogPreset, resolveConfirmDialog, showConfirmDialog } from './src/confirm-dialog.mjs';
 import { buildEditDraft } from './src/transaction-service.mjs';
 
@@ -900,7 +900,7 @@ async function saveTransaction() {
     const btn = document.getElementById('btn-save');
     const loadingState = setButtonLoading(btn, { label: 'กำลังบันทึก...', iconClass: 'w-4 h-4' });
     try {
-        await saveTransactionFlow({
+        const saved = await saveTransactionFlow({
             uiState,
             appState,
             currentUserProfileId,
@@ -919,7 +919,10 @@ async function saveTransaction() {
             display,
             setLocalDatetime,
         });
-        clearDraft();
+        if (saved) {
+            clearDraft();
+            pulseButtonComplete(btn);
+        }
     } finally {
         loadingState?.restore();
     }

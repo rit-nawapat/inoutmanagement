@@ -13,6 +13,7 @@ export function setButtonLoading(button, { label, iconClass = 'w-4 h-4', wrapper
 
   button.replaceChildren(loadingContent);
   button.disabled = true;
+  button.setAttribute('aria-busy', 'true');
   button.classList.add(...spinnerClass.split(' ').filter(Boolean));
   globalThis.lucide?.createIcons?.();
 
@@ -20,10 +21,31 @@ export function setButtonLoading(button, { label, iconClass = 'w-4 h-4', wrapper
     restore() {
       button.replaceChildren(...originalNodes.map((node) => node.cloneNode(true)));
       button.disabled = false;
+      button.removeAttribute('aria-busy');
       button.classList.remove(...spinnerClass.split(' ').filter(Boolean));
       globalThis.lucide?.createIcons?.();
     },
     button,
+  };
+}
+
+export function pulseButtonComplete(button, { className = 'action-complete', duration = 520 } = {}) {
+  if (!button) return null;
+
+  button.classList.remove(className);
+  // Restart the animation even when saves happen back-to-back.
+  button.offsetHeight;
+  button.classList.add(className);
+
+  const timer = globalThis.setTimeout(() => {
+    button.classList.remove(className);
+  }, duration);
+
+  return {
+    clear() {
+      globalThis.clearTimeout(timer);
+      button.classList.remove(className);
+    },
   };
 }
 

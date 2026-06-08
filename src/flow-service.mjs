@@ -185,7 +185,7 @@ export async function saveTransactionFlow({
   setLocalDatetime,
 }) {
   const finalVal = parseFloat(uiState.expression);
-  if (Number.isNaN(finalVal) || finalVal <= 0) { showToast('กรุณากรอกยอด', 'error'); return; }
+  if (Number.isNaN(finalVal) || finalVal <= 0) { showToast('กรุณากรอกยอด', 'error'); return false; }
 
   // Warning check if budget would go negative
   if (uiState.selectedBudgetGroupId && budgetGroups) {
@@ -199,7 +199,7 @@ export async function saveTransactionFlow({
           desc: `ยอดเงินคงเหลือในกลุ่ม "${matchedGroup.name}" จะติดลบ (คงเหลือ ฿${(matchedGroup.remaining - finalVal).toLocaleString()}) ยืนยันที่จะบันทึกต่อหรือไม่?`,
           btnText: 'บันทึกต่อ',
         });
-        if (!confirmSave) return;
+        if (!confirmSave) return false;
       }
     }
   }
@@ -280,6 +280,8 @@ export async function saveTransactionFlow({
       renderHistoryFn();
     }
   }
+
+  return true;
 }
 
 export async function executeDeleteFlow({

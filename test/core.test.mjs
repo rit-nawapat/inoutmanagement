@@ -19,7 +19,7 @@ import {
 import { appState, resetAppState } from '../src/app-state.mjs';
 import { uiState, resetUiState } from '../src/ui-state.mjs';
 import { guessAccountForCategory, guessCategoryFromText } from '../src/catalog-service.mjs';
-import { setButtonLoading } from '../src/button-helpers.mjs';
+import { pulseButtonComplete, setButtonLoading } from '../src/button-helpers.mjs';
 import { analyzeSlipText } from '../src/ocr-service.mjs';
 import { backspaceCalculator, calculateCalculator, clearCalculator, handleCalculatorKeyboardInput, inputDigitCalculator, inputOperatorCalculator, quickPriceCalculator, resetCalculatorScanState } from '../src/calculator-service.mjs';
 import { applyTransactionSave, buildEditDraft, buildTransactionRecord, formatThaiDisplayDateTime, normalizeTransactionRecord } from '../src/transaction-service.mjs';
@@ -253,6 +253,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(htmlSource, /href="style\.css\?v=\d+"/);
   assert.match(htmlSource, /src="app\.js\?v=\d+"/);
   assert.match(htmlSource, /id="tx-budget-summary-row"/);
+  assert.match(htmlSource, /id="btn-save"[\s\S]*pressable pressable-primary/);
   assert.match(htmlSource, /id="account-selector-modal"/);
   assert.match(htmlSource, /id="budget-selector-modal"/);
   assert.match(htmlSource, /md:hidden/);
@@ -298,6 +299,7 @@ test('mobile add page uses a compact one-page layout and removes OCR controls', 
   assert.match(appSource, /function\s+openBudgetSelectorModal\s*\(/);
   assert.match(appSource, /function\s+updateCompactSelectionSummary\s*\(/);
   assert.match(appSource, /if\s*\(pageId === 'add'\)\s*scrollMainContentToTop\(\)/);
+  assert.match(appSource, /pulseButtonComplete\(btn\)/);
   assert.match(appSource, /Array\.from\(\{\s*length:\s*24\s*\}/);
   assert.doesNotMatch(appSource, /selectedHour12/);
   assert.doesNotMatch(appSource, /wheelAmpm/);
@@ -332,6 +334,11 @@ test('mobile add page uses one scroll container with a fixed bottom save action'
   assert.match(cssSource, /--mobile-save-height:\s*48px/);
   assert.match(cssSource, /--add-content-height/);
   assert.match(cssSource, /body\.is-add-page #btn-save/);
+  assert.match(cssSource, /\.pressable\s*\{/);
+  assert.match(cssSource, /\.pressable:active/);
+  assert.match(cssSource, /\.pressable-primary/);
+  assert.match(cssSource, /\.action-complete/);
+  assert.match(cssSource, /@keyframes action-complete-pulse/);
   assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*position:\s*fixed/);
   assert.doesNotMatch(cssSource, /body\.is-add-page #btn-save\s*\{[^}]*position:\s*sticky/);
   assert.match(cssSource, /body\.is-add-page #btn-save\s*\{[\s\S]*bottom:\s*calc\(var\(--mobile-nav-height\)/);
@@ -1023,9 +1030,10 @@ test('saveTransactionFlow waits for sheet sync before resetting the form', async
     assert.equal(uiState.expression, '123');
 
     resolvePost();
-    await flowPromise;
+    const saved = await flowPromise;
 
     assert.equal(settled, true);
+    assert.equal(saved, true);
     assert.equal(display.innerText, '0');
     assert.equal(uiState.expression, '0');
     assert.equal(uiState.editModeId, null);
@@ -1057,6 +1065,7 @@ test('setButtonLoading swaps button content without using html strings', () => {
       this.disabled = false;
       this.textContent = '';
       this.attributes = {};
+      this.offsetHeight = 1;
     }
 
     appendChild(child) {
@@ -1083,6 +1092,10 @@ test('setButtonLoading swaps button content without using html strings', () => {
     setAttribute(name, value) {
       this.attributes[name] = value;
     }
+
+    removeAttribute(name) {
+      delete this.attributes[name];
+    }
   }
 
   globalThis.document = {
@@ -1105,15 +1118,52 @@ test('setButtonLoading swaps button content without using html strings', () => {
     const loading = setButtonLoading(button, { label: 'กำลังบันทึก...' });
 
     assert.equal(button.disabled, true);
+    assert.equal(button.attributes['aria-busy'], 'true');
     assert.equal(button.children.length, 1);
     assert.match(button.children[0].children[1].textContent, /กำลังบันทึก/);
 
     loading.restore();
     assert.equal(button.disabled, false);
+    assert.equal(button.attributes['aria-busy'], undefined);
     assert.equal(button.children.length, 1);
     assert.equal(button.children[0].textContent, 'บันทึก');
   } finally {
     globalThis.document = previousDocument;
+  }
+});
+
+test('pulseButtonComplete adds and clears the completion class', () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  let queuedCallback = null;
+
+  globalThis.setTimeout = (callback) => {
+    queuedCallback = callback;
+    return 1;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    const button = {
+      offsetHeight: 1,
+      classes: new Set(),
+      classList: {
+        add(token) { button.classes.add(token); },
+        remove(token) { button.classes.delete(token); },
+      },
+    };
+
+    const pulse = pulseButtonComplete(button, { duration: 1 });
+    assert.equal(button.classes.has('action-complete'), true);
+
+    queuedCallback();
+    assert.equal(button.classes.has('action-complete'), false);
+
+    pulse.clear();
+    assert.equal(button.classes.has('action-complete'), false);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
   }
 });
 
