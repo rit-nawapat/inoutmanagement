@@ -398,7 +398,7 @@ function deleteCurrentEditingProfile() { deleteCurrentEditingProfileService({ cl
 async function executeDeleteProfile(id) { allProfiles = await executeDeleteProfileService({ id, allProfiles, currentUserProfileId, setCurrentUserProfileId: (value) => { currentUserProfileId = value; }, saveSavedProfiles, saveCurrentProfileId, appState, updateDashboardFn: updateDashboard, renderProfileGridFn: renderProfileGrid, showProfileSelectionFn: showProfileSelection, showToast, apiClient }); }
 function closeProfileModal() { closeProfileModalService({}); }
 function handleProfileImageSelect(event) { handleProfileImageSelectService({ event, selectedImageState }); }
-async function saveProfileData() { await saveProfileDataService({ allProfiles, currentUserProfileId, selectedImageState, apiClient, saveSavedProfiles, updateActiveProfileUIFn: updateActiveProfileUI, renderProfileGridFn: renderProfileGrid, closeProfileModalFn: closeProfileModal, showToast }); }
+async function saveProfileData() { await saveProfileDataService({ allProfiles, currentUserProfileId, selectedImageState, apiClient, saveSavedProfiles, updateActiveProfileUIFn: updateActiveProfileUI, renderProfileGridFn: renderProfileGrid, closeProfileModalFn: closeProfileModal, showToast, setButtonLoading }); }
 
 // -------------------------------------------------------------
 // รายการประจำ Wrappers

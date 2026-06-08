@@ -32,6 +32,7 @@ import { resolveConfirmDialog } from '../src/confirm-dialog.mjs';
 import { cancelRecurringPayment, payRecurringItem } from '../src/recurring-service.mjs';
 import { SyncQueueManager } from '../src/sync-queue.mjs';
 import { createRefreshController } from '../src/refresh-controller.mjs';
+import { saveProfileData as saveProfileDataService } from '../src/profile-service.mjs';
 
 class FakeTouchElement {
   constructor() {
@@ -208,9 +209,11 @@ test('app declares recurring handlers before exposing them globally', () => {
 test('profile selection includes a dedicated loading block and app toggles it during init', () => {
   const appSource = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
   const htmlSource = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const profileSource = readFileSync(new URL('../src/profile-service.mjs', import.meta.url), 'utf8');
 
   assert.match(htmlSource, /id="profile-loading-block"/);
   assert.match(htmlSource, /id="profile-sync-indicator"/);
+  assert.match(htmlSource, /id="btn-save-profile"[\s\S]*pressable pressable-primary/);
   assert.match(htmlSource, /ตรวจสอบล่าสุด/);
   assert.match(htmlSource, /absolute bottom-6 right-4/);
   assert.match(htmlSource, /animate-spin/);
@@ -223,6 +226,88 @@ test('profile selection includes a dedicated loading block and app toggles it du
   assert.match(appSource, /setText\(profileSyncIndicatorText, isLoading \? 'ตรวจสอบล่าสุด' : ''\)/);
   assert.match(appSource, /setProfileSelectionLoading\(true\)/);
   assert.match(appSource, /finally\s*\{[\s\S]*setProfileSelectionLoading\(false\)/);
+  assert.match(appSource, /saveProfileDataService\(\{[\s\S]*setButtonLoading/);
+  assert.match(profileSource, /btn-save-profile/);
+  assert.match(profileSource, /setButtonLoading\?\./);
+});
+
+test('saveProfileData shows loading on the save profile button while saving', async () => {
+  const previousDocument = globalThis.document;
+  const previousLocalStorage = globalThis.localStorage;
+
+  try {
+    const fields = {
+      'profile-id-input': { value: 'user_1' },
+      'profile-name-input': { value: 'นวพัตร์' },
+      'profile-old-image-url': { value: '' },
+      'btn-save-profile': { id: 'btn-save-profile' },
+    };
+    globalThis.document = {
+      createElement(tagName) {
+        return {
+          tagName,
+          children: [],
+          className: '',
+          appendChild(child) { this.children.push(child); return child; },
+          setAttribute(name, value) { this[name] = value; },
+        };
+      },
+      createTextNode(text) {
+        return { textContent: text };
+      },
+      getElementById(id) {
+        return fields[id] || null;
+      },
+    };
+    globalThis.localStorage = {
+      setItem() {},
+      getItem() { return null; },
+    };
+
+    let resolvePost;
+    const apiDone = new Promise((resolve) => { resolvePost = resolve; });
+    const loadingCalls = [];
+    const restoreCalls = [];
+    const toasts = [];
+
+    const saveTask = saveProfileDataService({
+      document: globalThis.document,
+      allProfiles: [],
+      currentUserProfileId: 'user_1',
+      selectedImageState: { base64: null, mimeType: null, fileName: null },
+      apiClient: {
+        postJson() {
+          return apiDone;
+        },
+      },
+      saveSavedProfiles() {},
+      updateActiveProfileUIFn() {},
+      renderProfileGridFn() {},
+      closeProfileModalFn() {},
+      showToast(message, type) {
+        toasts.push({ message, type });
+      },
+      setButtonLoading(button, options) {
+        loadingCalls.push({ button, options });
+        return { restore() { restoreCalls.push(button); } };
+      },
+    });
+
+    await Promise.resolve();
+    assert.equal(loadingCalls.length, 1);
+    assert.equal(loadingCalls[0].button.id, 'btn-save-profile');
+    assert.match(loadingCalls[0].options.label, /กำลังบันทึก/);
+    assert.equal(restoreCalls.length, 0);
+
+    resolvePost({ status: 'Success', imageUrl: 'avatar.jpg' });
+    await saveTask;
+
+    assert.equal(restoreCalls.length, 1);
+    assert.equal(toasts.at(-1).type, 'success');
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.localStorage = previousLocalStorage;
+  }
 });
 
 test('date writers use the shared Thai display formatter', () => {

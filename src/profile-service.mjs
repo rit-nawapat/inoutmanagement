@@ -179,6 +179,7 @@ export async function saveProfileData({
   renderProfileGridFn,
   closeProfileModalFn,
   showToast,
+  setButtonLoading,
 }) {
   const id = document.getElementById('profile-id-input').value;
   const name = document.getElementById('profile-name-input').value.trim();
@@ -187,19 +188,28 @@ export async function saveProfileData({
   if (!name) { showToast('กรุณาระบุชื่อโปรไฟล์', 'error'); return; }
 
   const payload = { action: 'save_profile', profileId: id, name, oldImageUrl, imageBase64: selectedImageState.base64, mimeType: selectedImageState.mimeType, fileName: selectedImageState.fileName };
-  await nextFrame();
-  const result = await apiClient.postJson(payload);
-  if (result.status === 'Success') {
-    const existingIndex = allProfiles.findIndex((p) => p.id === id);
-    const newProfile = { id, name, imageUrl: result.imageUrl };
-    if (existingIndex > -1) allProfiles[existingIndex] = newProfile; else allProfiles.push(newProfile);
-    saveSavedProfiles(localStorage, allProfiles);
-    if (currentUserProfileId === id) updateActiveProfileUIFn();
-    renderProfileGridFn();
-    closeProfileModalFn();
-    showToast('บันทึกโปรไฟล์สำเร็จ', 'success');
-  } else {
+  const btn = document.getElementById('btn-save-profile');
+  const loadingState = setButtonLoading?.(btn, { label: 'กำลังบันทึก...', iconClass: 'w-4 h-4' });
+
+  try {
+    await nextFrame();
+    const result = await apiClient.postJson(payload);
+    if (result.status === 'Success') {
+      const existingIndex = allProfiles.findIndex((p) => p.id === id);
+      const newProfile = { id, name, imageUrl: result.imageUrl };
+      if (existingIndex > -1) allProfiles[existingIndex] = newProfile; else allProfiles.push(newProfile);
+      saveSavedProfiles(localStorage, allProfiles);
+      if (currentUserProfileId === id) updateActiveProfileUIFn();
+      renderProfileGridFn();
+      closeProfileModalFn();
+      showToast('บันทึกโปรไฟล์สำเร็จ', 'success');
+    } else {
+      showToast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+    }
+  } catch {
     showToast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+  } finally {
+    loadingState?.restore();
   }
 }
 
